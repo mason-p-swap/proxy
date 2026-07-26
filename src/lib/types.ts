@@ -59,6 +59,7 @@ export type Route =
   | { name: "dashboard" }
   | { name: "supply" }
   | { name: "borrow" }
+  | { name: "docs" }
   | { name: "sim" }
   | { name: "faq" }
   | { name: "how" }

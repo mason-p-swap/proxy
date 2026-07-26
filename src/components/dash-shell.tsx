@@ -10,7 +10,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-export type DashSection = "dashboard" | "supply" | "borrow"
+export type DashSection = "dashboard" | "supply" | "borrow" | "docs"
 
 type Props = {
   active: DashSection
@@ -72,8 +72,9 @@ export function DashShell({ active, navigate, children }: Props) {
             />
             <SideItem
               icon={FileCode2}
-              label="Developer Docs"
-              href={`${EXPLORER}/address/${ADDR_V2.market}?tab=contract`}
+              label="Docs"
+              active={active === "docs"}
+              onClick={() => navigate({ name: "docs" })}
             />
           </nav>
 

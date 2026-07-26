@@ -10,6 +10,7 @@ import { DefiPage } from "@/pages/defi"
 import { DashboardPage } from "@/pages/dashboard"
 import { SupplyPage } from "@/pages/supply"
 import { BorrowPage } from "@/pages/borrow"
+import { DocsPage } from "@/pages/docs"
 import { SimulatorPage } from "@/pages/simulator"
 import { HowItWorksPage } from "@/pages/how-it-works"
 import { FaqPage } from "@/pages/faq"
@@ -33,6 +34,7 @@ function AppContent() {
         {route.name === "dashboard" && <DashboardPage navigate={navigate} />}
         {route.name === "supply" && <SupplyPage navigate={navigate} />}
         {route.name === "borrow" && <BorrowPage navigate={navigate} />}
+        {route.name === "docs" && <DocsPage navigate={navigate} />}
         {route.name === "sim" && <SimulatorPage />}
         {route.name === "how" && <HowItWorksPage navigate={navigate} />}
         {route.name === "faq" && <FaqPage navigate={navigate} />}
