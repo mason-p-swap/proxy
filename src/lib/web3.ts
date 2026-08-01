@@ -50,7 +50,7 @@ export const ADDR_V2 = {
   dai: "0x88e8ba943d04b2de1b1c7e1a2b84e501d90333e1" as Address,
   usdc: "0x335ff97061154bf5372efb8c0b9b57f944279994" as Address,
   usdt: "0xa9ca2f149747ceb21a9ae707cb0a4380dba3ee02" as Address,
-  oracle: "0x19ec82b51c672f56fe8c2a775c87a7d1bcaf16bb" as Address,
+  oracle: "0x7bcea81573c4ce0e6b3c0ec1db8397219f24fe18" as Address,
   market: "0xd0f6a8fddc8b92553896e4525b842b57b266e94e" as Address,
 } as const
 

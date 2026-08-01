@@ -33,7 +33,7 @@ const RESERVES = [
 
 const CONTRACTS = [
   { name: "MoneyMarket", addr: ADDR_V2.market },
-  { name: "Price oracle", addr: ADDR_V2.oracle },
+  { name: "Chainlink oracle", addr: ADDR_V2.oracle },
   { name: "WETH (test)", addr: ADDR_V2.weth },
   { name: "DAI (test)", addr: ADDR_V2.dai },
   { name: "USDC (test)", addr: ADDR_V2.usdc },
@@ -299,9 +299,10 @@ export function DocsPage({ navigate }: Props) {
               faucets. Never deploy this code to a live network or use it with real funds.
             </p>
             <p>
-              The price oracle is intentionally owner-settable so price movements and
-              liquidations can be demonstrated; a production deployment would use decentralized
-              price feeds.
+              Prices come from decentralized Chainlink data feeds, with stablecoins pegged to
+              $1. On this test deployment the oracle also supports a manual override so price
+              movements and liquidations can be demonstrated; that override would not exist in a
+              production deployment.
             </p>
           </Doc>
         </div>
