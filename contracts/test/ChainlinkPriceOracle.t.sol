@@ -103,6 +103,14 @@ contract ChainlinkPriceOracleTest is Test {
         assertEq(oracle.getPrice(weth), 3_500e8);
     }
 
+    function test_incompleteRound_reverts() public {
+        vm.prank(owner);
+        oracle.setAggregator(weth, address(ethFeed));
+        ethFeed.setUpdatedAt(0);
+        vm.expectRevert(abi.encodeWithSelector(ChainlinkPriceOracle.IncompleteRound.selector, weth));
+        oracle.getPrice(weth);
+    }
+
     function test_onlyOwner_canConfigure() public {
         vm.prank(stranger);
         vm.expectRevert();

@@ -28,6 +28,7 @@ contract ChainlinkPriceOracle is IPriceOracle, Ownable {
 
     error NotConfigured(address token);
     error InvalidAggregatorPrice(address token, int256 answer);
+    error IncompleteRound(address token);
     error StalePrice(address token, uint256 updatedAt);
     error InvalidPrice();
 
@@ -76,8 +77,10 @@ contract ChainlinkPriceOracle is IPriceOracle, Ownable {
         if (f.overridePrice != 0) return f.overridePrice;
 
         if (f.aggregator != address(0)) {
-            (, int256 answer,, uint256 updatedAt,) = AggregatorV3Interface(f.aggregator).latestRoundData();
+            (uint80 roundId, int256 answer,, uint256 updatedAt, uint80 answeredInRound) =
+                AggregatorV3Interface(f.aggregator).latestRoundData();
             if (answer <= 0) revert InvalidAggregatorPrice(token, answer);
+            if (updatedAt == 0 || answeredInRound < roundId) revert IncompleteRound(token);
             if (maxStaleness != 0 && block.timestamp - updatedAt > maxStaleness) {
                 revert StalePrice(token, updatedAt);
             }

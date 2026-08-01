@@ -446,6 +446,32 @@ contract MoneyMarketTest is Test {
         market.liquidate(alice, address(usdc), address(dai), 1_000e6);
     }
 
+    function test_debtView_accruesWithoutTouchingReserve() public {
+        _seedUsdcLiquidity();
+        vm.startPrank(alice);
+        market.supply(address(weth), 100e18);
+        market.borrow(address(usdc), 250_000e6);
+        vm.stopPrank();
+
+        uint256 debtNow = market.debtBalanceOf(address(usdc), alice);
+        vm.warp(block.timestamp + 180 days);
+        uint256 debtLater = market.debtBalanceOf(address(usdc), alice);
+        assertGt(debtLater, debtNow);
+    }
+
+    function test_healthFactor_dropsFromAccruedInterest_noAccrueCall() public {
+        _seedUsdcLiquidity();
+        vm.startPrank(alice);
+        market.supply(address(weth), 1e18);
+        market.borrow(address(usdc), 2_000e6);
+        vm.stopPrank();
+
+        uint256 hfBefore = market.healthFactor(alice);
+        vm.warp(block.timestamp + 365 days);
+        uint256 hfAfter = market.healthFactor(alice);
+        assertLt(hfAfter, hfBefore);
+    }
+
     function test_pause_blocksNewRisk_allowsExits() public {
         _seedUsdcLiquidity();
         vm.startPrank(alice);

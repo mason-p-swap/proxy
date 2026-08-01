@@ -196,7 +196,7 @@ contract MoneyMarket is ReentrancyGuard, Ownable, Pausable {
         s.lastAccrual = uint40(block.timestamp);
         if (s.totalScaledDebt == 0) return;
 
-        uint256 rate = borrowRate(asset);
+        uint256 rate = _borrowRateStored(asset);
         uint256 oldBorrowIndex = s.borrowIndex;
         uint256 growth = (rate * dt) / SECONDS_PER_YEAR;
         uint256 newBorrowIndex = (oldBorrowIndex * (WAD + growth)) / WAD;
@@ -391,12 +391,14 @@ contract MoneyMarket is ReentrancyGuard, Ownable, Pausable {
 
     function totalSuppliedOf(address asset) public view returns (uint256) {
         ReserveState storage s = stateOf[asset];
-        return (uint256(s.totalScaledSupply) * s.liquidityIndex) / WAD;
+        (uint256 liqIdx,) = _currentIndexes(asset);
+        return (uint256(s.totalScaledSupply) * liqIdx) / WAD;
     }
 
     function totalBorrowedOf(address asset) public view returns (uint256) {
         ReserveState storage s = stateOf[asset];
-        return (uint256(s.totalScaledDebt) * s.borrowIndex) / WAD;
+        (, uint256 borIdx) = _currentIndexes(asset);
+        return (uint256(s.totalScaledDebt) * borIdx) / WAD;
     }
 
     function utilizationOf(address asset) public view returns (uint256) {
@@ -447,13 +449,13 @@ contract MoneyMarket is ReentrancyGuard, Ownable, Pausable {
     }
 
     function supplyBalanceOf(address asset, address user) public view returns (uint256) {
-        ReserveState storage s = stateOf[asset];
-        return (scaledSupplyOf[asset][user] * s.liquidityIndex) / WAD;
+        (uint256 liqIdx,) = _currentIndexes(asset);
+        return (scaledSupplyOf[asset][user] * liqIdx) / WAD;
     }
 
     function debtBalanceOf(address asset, address user) public view returns (uint256) {
-        ReserveState storage s = stateOf[asset];
-        return (scaledDebtOf[asset][user] * s.borrowIndex) / WAD;
+        (, uint256 borIdx) = _currentIndexes(asset);
+        return (scaledDebtOf[asset][user] * borIdx) / WAD;
     }
 
     function healthFactor(address user) public view returns (uint256) {
@@ -508,11 +510,12 @@ contract MoneyMarket is ReentrancyGuard, Ownable, Pausable {
             address asset = reservesList[i];
             ReserveState storage s = stateOf[asset];
             ReserveConfig storage cfg = configOf[asset];
+            (uint256 liqIdx, uint256 borIdx) = _currentIndexes(asset);
 
             uint256 scaledSupply = scaledSupplyOf[asset][user];
             if (scaledSupply != 0 && cfg.collateral && !collateralDisabled[asset][user]) {
                 uint256 usd = _toUsd(
-                    (scaledSupply * s.liquidityIndex) / WAD, s.decimals, oracle.getPrice(asset)
+                    (scaledSupply * liqIdx) / WAD, s.decimals, oracle.getPrice(asset)
                 );
                 collateralUsd += usd;
                 thresholdUsd += (usd * cfg.liqThresholdBps) / BPS;
@@ -522,11 +525,47 @@ contract MoneyMarket is ReentrancyGuard, Ownable, Pausable {
             uint256 scaledDebt = scaledDebtOf[asset][user];
             if (scaledDebt != 0) {
                 debtUsd += _toUsd(
-                    (scaledDebt * s.borrowIndex) / WAD, s.decimals, oracle.getPrice(asset)
+                    (scaledDebt * borIdx) / WAD, s.decimals, oracle.getPrice(asset)
                 );
             }
         }
         reserveCount = len;
+    }
+
+    function _borrowRateStored(address asset) private view returns (uint256) {
+        ReserveConfig storage cfg = configOf[asset];
+        ReserveState storage s = stateOf[asset];
+        uint256 supplied = (uint256(s.totalScaledSupply) * s.liquidityIndex) / WAD;
+        uint256 u;
+        if (supplied != 0) {
+            uint256 borrowed = (uint256(s.totalScaledDebt) * s.borrowIndex) / WAD;
+            u = (borrowed * WAD) / supplied;
+            if (u > WAD) u = WAD;
+        }
+        if (u <= cfg.optimalUtil) {
+            return cfg.baseRate + (u * cfg.slope1) / cfg.optimalUtil;
+        }
+        uint256 excess = ((u - cfg.optimalUtil) * WAD) / (WAD - cfg.optimalUtil);
+        return cfg.baseRate + cfg.slope1 + (excess * cfg.slope2) / WAD;
+    }
+
+    function _currentIndexes(address asset) private view returns (uint256 liqIdx, uint256 borIdx) {
+        ReserveState storage s = stateOf[asset];
+        liqIdx = s.liquidityIndex;
+        borIdx = s.borrowIndex;
+
+        uint256 dt = block.timestamp - s.lastAccrual;
+        if (dt == 0 || s.totalScaledDebt == 0) return (liqIdx, borIdx);
+
+        uint256 rate = _borrowRateStored(asset);
+        uint256 growth = (rate * dt) / SECONDS_PER_YEAR;
+        borIdx = (uint256(s.borrowIndex) * (WAD + growth)) / WAD;
+
+        uint256 interest = (uint256(s.totalScaledDebt) * (borIdx - s.borrowIndex)) / WAD;
+        if (interest != 0 && s.totalScaledSupply != 0) {
+            uint256 supplierCut = interest - (interest * configOf[asset].reserveFactorBps) / BPS;
+            liqIdx = uint256(s.liquidityIndex) + (supplierCut * WAD) / s.totalScaledSupply;
+        }
     }
 
     function _isCollateral(address asset, address user) private view returns (bool) {
