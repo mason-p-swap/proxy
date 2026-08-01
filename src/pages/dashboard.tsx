@@ -206,8 +206,9 @@ export function DashboardPage({ navigate }: Props) {
               <div className="overflow-hidden rounded-xl border border-border/60 bg-card/40">
                 <div className="divide-y divide-border/40">
                   {supplies.map((a) => {
-                    const r = mm.reserves[a.key]!
-                    const u = mm.userReserves[a.key]!
+                    const r = mm.reserves[a.key]
+                    const u = mm.userReserves[a.key]
+                    if (!r || !u) return null
                     return (
                       <PositionRow
                         key={`s-${a.key}`}
@@ -232,8 +233,9 @@ export function DashboardPage({ navigate }: Props) {
                     )
                   })}
                   {borrows.map((a) => {
-                    const r = mm.reserves[a.key]!
-                    const u = mm.userReserves[a.key]!
+                    const r = mm.reserves[a.key]
+                    const u = mm.userReserves[a.key]
+                    if (!r || !u) return null
                     return (
                       <PositionRow
                         key={`b-${a.key}`}
