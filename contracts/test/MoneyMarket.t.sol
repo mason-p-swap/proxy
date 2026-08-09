@@ -446,6 +446,28 @@ contract MoneyMarketTest is Test {
         market.liquidate(alice, address(usdc), address(dai), 1_000e6);
     }
 
+    function test_liquidate_deeplyUnderwater_paysOnlyForSeized() public {
+        _seedUsdcLiquidity();
+        vm.startPrank(alice);
+        market.supply(address(weth), 1e18);
+        market.borrow(address(usdc), 2_500e6);
+        vm.stopPrank();
+
+        oracle.setPrice(address(weth), 1_000e8);
+
+        uint256 bobUsdcBefore = usdc.balanceOf(bob);
+        uint256 bobWethBefore = weth.balanceOf(bob);
+        vm.prank(bob);
+        uint256 seized = market.liquidate(alice, address(usdc), address(weth), type(uint256).max);
+
+        assertApproxEqAbs(seized, 1e18, 1e12);
+        assertEq(weth.balanceOf(bob) - bobWethBefore, seized);
+
+        uint256 paid = bobUsdcBefore - usdc.balanceOf(bob);
+        assertApproxEqRel(paid, 952.38e6, 1e15);
+        assertLt(paid, 1_000e6);
+    }
+
     function test_debtView_accruesWithoutTouchingReserve() public {
         _seedUsdcLiquidity();
         vm.startPrank(alice);

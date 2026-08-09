@@ -353,15 +353,19 @@ contract MoneyMarket is ReentrancyGuard, Ownable, Pausable {
         if (repayAmount > maxRepay) repayAmount = maxRepay;
         if (repayAmount == 0) revert ZeroAmount();
 
-        uint256 repayUsd =
-            _toUsd(repayAmount, ds.decimals, oracle.getPrice(debtAsset));
-        uint256 seizeUsd = (repayUsd * (BPS + configOf[collateralAsset].liqBonusBps)) / BPS;
-        collateralSeized =
-            _fromUsd(seizeUsd, cs.decimals, oracle.getPrice(collateralAsset));
+        uint256 bonusBps = configOf[collateralAsset].liqBonusBps;
+        uint256 repayUsd = _toUsd(repayAmount, ds.decimals, oracle.getPrice(debtAsset));
+        uint256 seizeUsd = (repayUsd * (BPS + bonusBps)) / BPS;
+        collateralSeized = _fromUsd(seizeUsd, cs.decimals, oracle.getPrice(collateralAsset));
 
         uint256 userCollateral = (scaledSupplyOf[collateralAsset][user] * cs.liquidityIndex) / WAD;
-        if (collateralSeized > userCollateral) collateralSeized = userCollateral;
-        if (collateralSeized == 0) revert ZeroAmount();
+        if (collateralSeized > userCollateral) {
+            collateralSeized = userCollateral;
+            uint256 cappedSeizeUsd = _toUsd(collateralSeized, cs.decimals, oracle.getPrice(collateralAsset));
+            uint256 cappedRepayUsd = (cappedSeizeUsd * BPS) / (BPS + bonusBps);
+            repayAmount = _fromUsd(cappedRepayUsd, ds.decimals, oracle.getPrice(debtAsset));
+        }
+        if (collateralSeized == 0 || repayAmount == 0) revert ZeroAmount();
 
         uint256 scaledSeize = _ceilDiv(collateralSeized * WAD, cs.liquidityIndex);
         if (scaledSeize > scaledSupplyOf[collateralAsset][user]) {
