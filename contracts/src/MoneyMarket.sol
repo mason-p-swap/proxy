@@ -106,6 +106,7 @@ contract MoneyMarket is ReentrancyGuard, Ownable, Pausable {
     error PositionHealthy(uint256 healthFactor);
     error NoDebt();
     error InvalidParams();
+    error CastOverflow();
 
     constructor(address oracle_, address owner_) Ownable(owner_) {
         if (oracle_ == address(0)) revert ZeroAddress();
@@ -171,7 +172,7 @@ contract MoneyMarket is ReentrancyGuard, Ownable, Pausable {
         uint256 scaled = _ceilDiv(amount * WAD, s.liquidityIndex);
         if (scaled > treasuryScaledOf[asset]) scaled = treasuryScaledOf[asset];
         treasuryScaledOf[asset] -= scaled;
-        s.totalScaledSupply -= uint128(scaled);
+        s.totalScaledSupply -= _toU128(scaled);
 
         IERC20(asset).safeTransfer(to, amount);
         emit TreasuryWithdrawn(asset, to, amount);
@@ -200,7 +201,7 @@ contract MoneyMarket is ReentrancyGuard, Ownable, Pausable {
         uint256 oldBorrowIndex = s.borrowIndex;
         uint256 growth = (rate * dt) / SECONDS_PER_YEAR;
         uint256 newBorrowIndex = (oldBorrowIndex * (WAD + growth)) / WAD;
-        s.borrowIndex = uint128(newBorrowIndex);
+        s.borrowIndex = _toU128(newBorrowIndex);
 
         uint256 interest = (uint256(s.totalScaledDebt) * (newBorrowIndex - oldBorrowIndex)) / WAD;
         if (interest == 0 || s.totalScaledSupply == 0) {
@@ -214,12 +215,12 @@ contract MoneyMarket is ReentrancyGuard, Ownable, Pausable {
 
         uint256 newLiquidityIndex =
             uint256(s.liquidityIndex) + (supplierCut * WAD) / s.totalScaledSupply;
-        s.liquidityIndex = uint128(newLiquidityIndex);
+        s.liquidityIndex = _toU128(newLiquidityIndex);
 
         if (treasuryCut > 0) {
             uint256 scaled = (treasuryCut * WAD) / newLiquidityIndex;
             treasuryScaledOf[asset] += scaled;
-            s.totalScaledSupply += uint128(scaled);
+            s.totalScaledSupply += _toU128(scaled);
         }
 
         emit Accrued(asset, newLiquidityIndex, newBorrowIndex, interest);
@@ -237,7 +238,7 @@ contract MoneyMarket is ReentrancyGuard, Ownable, Pausable {
         uint256 scaled = (amount * WAD) / s.liquidityIndex;
         if (scaled == 0) revert ZeroAmount();
         scaledSupplyOf[asset][msg.sender] += scaled;
-        s.totalScaledSupply += uint128(scaled);
+        s.totalScaledSupply += _toU128(scaled);
 
         IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
         emit Supplied(asset, msg.sender, amount);
@@ -256,7 +257,7 @@ contract MoneyMarket is ReentrancyGuard, Ownable, Pausable {
         uint256 scaled = _ceilDiv(amount * WAD, s.liquidityIndex);
         if (scaled > scaledSupplyOf[asset][msg.sender]) scaled = scaledSupplyOf[asset][msg.sender];
         scaledSupplyOf[asset][msg.sender] -= scaled;
-        s.totalScaledSupply -= uint128(scaled);
+        s.totalScaledSupply -= _toU128(scaled);
 
         if (_isCollateral(asset, msg.sender)) {
             uint256 hf = healthFactor(msg.sender);
@@ -282,7 +283,7 @@ contract MoneyMarket is ReentrancyGuard, Ownable, Pausable {
 
         uint256 scaled = _ceilDiv(amount * WAD, s.borrowIndex);
         scaledDebtOf[asset][msg.sender] += scaled;
-        s.totalScaledDebt += uint128(scaled);
+        s.totalScaledDebt += _toU128(scaled);
 
         (,, uint256 powerUsd, uint256 debtUsd,) = _portfolio(msg.sender);
         if (debtUsd > powerUsd) revert ExceedsBorrowPower(debtUsd, powerUsd);
@@ -311,7 +312,7 @@ contract MoneyMarket is ReentrancyGuard, Ownable, Pausable {
             if (scaled > scaledDebtOf[asset][onBehalfOf]) scaled = scaledDebtOf[asset][onBehalfOf];
         }
         scaledDebtOf[asset][onBehalfOf] -= scaled;
-        s.totalScaledDebt -= uint128(scaled);
+        s.totalScaledDebt -= _toU128(scaled);
 
         IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
         emit Repaid(asset, onBehalfOf, msg.sender, amount);
@@ -372,12 +373,12 @@ contract MoneyMarket is ReentrancyGuard, Ownable, Pausable {
             scaledSeize = scaledSupplyOf[collateralAsset][user];
         }
         scaledSupplyOf[collateralAsset][user] -= scaledSeize;
-        cs.totalScaledSupply -= uint128(scaledSeize);
+        cs.totalScaledSupply -= _toU128(scaledSeize);
 
         uint256 scaledRepay = (repayAmount * WAD) / ds.borrowIndex;
         if (scaledRepay > scaledDebtOf[debtAsset][user]) scaledRepay = scaledDebtOf[debtAsset][user];
         scaledDebtOf[debtAsset][user] -= scaledRepay;
-        ds.totalScaledDebt -= uint128(scaledRepay);
+        ds.totalScaledDebt -= _toU128(scaledRepay);
 
         IERC20(debtAsset).safeTransferFrom(msg.sender, address(this), repayAmount);
         IERC20(collateralAsset).safeTransfer(msg.sender, collateralSeized);
@@ -590,5 +591,10 @@ contract MoneyMarket is ReentrancyGuard, Ownable, Pausable {
 
     function _ceilDiv(uint256 a, uint256 b) private pure returns (uint256) {
         return (a + b - 1) / b;
+    }
+
+    function _toU128(uint256 x) private pure returns (uint128) {
+        if (x > type(uint128).max) revert CastOverflow();
+        return uint128(x);
     }
 }

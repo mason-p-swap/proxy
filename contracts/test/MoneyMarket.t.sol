@@ -446,6 +446,27 @@ contract MoneyMarketTest is Test {
         market.liquidate(alice, address(usdc), address(dai), 1_000e6);
     }
 
+    function testFuzz_projectedIndexMatchesAccrual(uint256 warpTime, uint256 borrowAmt) public {
+        _seedUsdcLiquidity();
+        borrowAmt = bound(borrowAmt, 1e6, 200_000e6);
+        warpTime = bound(warpTime, 0, 3650 days);
+
+        vm.startPrank(alice);
+        market.supply(address(weth), 100e18);
+        market.borrow(address(usdc), borrowAmt);
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + warpTime);
+
+        uint256 projectedDebt = market.debtBalanceOf(address(usdc), alice);
+        uint256 projectedSupply = market.supplyBalanceOf(address(usdc), carol);
+
+        market.accrue(address(usdc));
+
+        assertEq(market.debtBalanceOf(address(usdc), alice), projectedDebt, "debt projection mismatch");
+        assertEq(market.supplyBalanceOf(address(usdc), carol), projectedSupply, "supply projection mismatch");
+    }
+
     function test_liquidate_deeplyUnderwater_paysOnlyForSeized() public {
         _seedUsdcLiquidity();
         vm.startPrank(alice);
