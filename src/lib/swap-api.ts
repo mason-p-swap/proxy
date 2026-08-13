@@ -3,7 +3,7 @@ import type { Exchange, ExchangeStatus } from "./types"
 const V1 = "https://api.changenow.io/v1"
 const V2 = "https://api.changenow.io/v2"
 
-const API_KEY = (import.meta.env.VITE_CHANGENOW_API_KEY as string | undefined)?.trim()
+const API_KEY = (import.meta.env.VITE_SWAP_API_KEY as string | undefined)?.trim()
 
 export const hasApiKey = Boolean(API_KEY)
 
@@ -32,13 +32,13 @@ const SYMBOL_BY_TICKER: Record<string, string> = Object.fromEntries(
   Object.entries(CN_TICKER).map(([sym, ticker]) => [ticker, sym])
 )
 
-export class ChangeNowError extends Error {}
+export class SwapError extends Error {}
 
 async function getJson(url: string): Promise<any> {
   const res = await fetch(url)
   const body = await res.json().catch(() => null)
   if (!res.ok) {
-    throw new ChangeNowError(humanizeError(body) ?? `request failed (${res.status})`)
+    throw new SwapError(humanizeError(body) ?? `request failed (${res.status})`)
   }
   return body
 }
@@ -130,7 +130,7 @@ export async function createExchange(params: {
   destinationAddress: string
   extraId?: string
 }): Promise<Exchange> {
-  if (!API_KEY) throw new ChangeNowError("live swaps need a ChangeNOW API key (see .env.example)")
+  if (!API_KEY) throw new SwapError("live swaps need a swap API key (see .env.example)")
   const res = await fetch(`${V1}/transactions/${API_KEY}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -144,7 +144,7 @@ export async function createExchange(params: {
   })
   const body = await res.json().catch(() => null)
   if (!res.ok || !body?.id || !body?.payinAddress) {
-    throw new ChangeNowError(humanizeError(body) ?? "could not create the swap — try again")
+    throw new SwapError(humanizeError(body) ?? "could not create the swap — try again")
   }
   const toAmount = Number(body.amount) || 0
   const order: Exchange = {

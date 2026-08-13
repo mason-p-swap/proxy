@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import QRCode from "react-qr-code"
 import { CryptoIcon } from "@/components/crypto-icon"
 import { COIN_MAP } from "@/lib/mock-data"
-import { hasApiKey, getStoredOrder, fetchOrderUpdate } from "@/lib/changenow"
+import { hasApiKey, getStoredOrder, fetchOrderUpdate } from "@/lib/swap-api"
 import { usePrices } from "@/lib/prices"
 import { fmtAmount, fmtUsd, fmtDate } from "@/lib/format"
 import type { Route, Exchange, ExchangeStatus } from "@/lib/types"
@@ -103,7 +103,7 @@ export function ExchangePage({ route, navigate }: Props) {
               <div className="mt-1 text-[10px] text-muted-foreground">
                 {hasApiKey
                   ? "check the order id and try again"
-                  : "orders created on this device appear here — remote lookup needs the ChangeNOW API key"}
+                  : "orders created on this device appear here — remote lookup needs the swap API key"}
               </div>
             </>
           ) : (
@@ -331,7 +331,7 @@ export function ExchangePage({ route, navigate }: Props) {
                 <div className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">
                   {exchange.status === "expired"
                     ? "no deposit arrived in time. nothing was sent, nothing was lost — just start a new swap."
-                    : "something went wrong with this order. if you already deposited, contact ChangeNOW support with your order id — funds are recoverable."}
+                    : "something went wrong with this order. if you already deposited, contact support with your order id — funds are recoverable."}
                 </div>
               </div>
               <button
@@ -404,7 +404,7 @@ export function ExchangePage({ route, navigate }: Props) {
 
           {!hasApiKey && !TERMINAL.includes(exchange.status) && (
             <p className="px-1 text-[10px] leading-relaxed text-muted-foreground">
-              live status updates need the ChangeNOW API key — this view won&apos;t refresh on its own.
+              live status updates need the swap API key — this view won&apos;t refresh on its own.
             </p>
           )}
         </div>

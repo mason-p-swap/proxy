@@ -8,7 +8,7 @@ import {
   validateAddress,
   createExchange,
   type Quote,
-} from "@/lib/changenow"
+} from "@/lib/swap-api"
 import { usePrices } from "@/lib/prices"
 import { fmtUsd, fmtAmount } from "@/lib/format"
 import type { Route } from "@/lib/types"
@@ -216,7 +216,7 @@ export function SwapWidget({ navigate }: Props) {
               ? <span className="text-destructive">{quoteError}</span>
               : rate
                 ? `1 ${fromSymbol} = ${fmtAmount(rate)} ${toSymbol}`
-                : "live rate via ChangeNOW"}
+                : "live market rate"}
           </span>
         </div>
       </div>
@@ -302,7 +302,7 @@ export function SwapWidget({ navigate }: Props) {
 
       {!hasApiKey && (
         <p className="mt-3 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-          Rates shown are live. To enable real swaps, add a free ChangeNOW API key:
+          Rates shown are live. To enable real swaps, add a swap API key:
           copy <span className="font-mono">.env.example</span> to <span className="font-mono">.env</span>,
           paste your key, and restart the dev server.
         </p>

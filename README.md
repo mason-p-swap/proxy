@@ -5,7 +5,7 @@ Live on the **Sepolia testnet** — unaudited, educational, testnet-only code.
 
 ## What's inside
 
-**Instant swapper** — cross-chain swaps powered by the ChangeNOW API: live
+**Instant swapper** — cross-chain swaps via a third-party swap API: live
 quotes, address validation, real order creation and status tracking.
 
 **Money market** — a multi-asset pooled lending protocol:
@@ -40,7 +40,7 @@ All source-verified on [Blockscout](https://eth-sepolia.blockscout.com).
 
 ```bash
 npm install
-cp .env.example .env   # optional: add a ChangeNOW API key to enable live swaps
+cp .env.example .env   # optional: add a swap API key to enable live swaps
 npm run dev            # http://localhost:5173
 ```
 

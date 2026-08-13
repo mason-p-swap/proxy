@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { CryptoIcon } from "@/components/crypto-icon"
-import { hasApiKey, getStoredOrder, fetchOrderUpdate } from "@/lib/changenow"
+import { hasApiKey, getStoredOrder, fetchOrderUpdate } from "@/lib/swap-api"
 import { usePrices } from "@/lib/prices"
 import { fmtAmount, fmtUsd, fmtDate } from "@/lib/format"
 import type { Route, Exchange } from "@/lib/types"
@@ -80,7 +80,7 @@ export function OrderLookupPage({ navigate }: Props) {
         </div>
         {!hasApiKey && (
           <p className="mt-2 px-1 text-[10px] text-muted-foreground">
-            without a ChangeNOW API key, only orders created on this device can be found.
+            without a swap API key, only orders created on this device can be found.
           </p>
         )}
       </form>
