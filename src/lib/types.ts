@@ -52,8 +52,6 @@ export type Exchange = {
 
 export type Route =
   | { name: "home" }
-  | { name: "exchange"; id: string }
-  | { name: "lookup" }
   | { name: "markets" }
   | { name: "defi" }
   | { name: "dashboard" }

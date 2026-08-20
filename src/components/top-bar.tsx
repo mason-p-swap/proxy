@@ -57,7 +57,7 @@ function WalletButton() {
 }
 
 export function TopBar({ route, navigate }: Props) {
-  const activeName = route.name === "exchange" ? "home" : route.name
+  const activeName = route.name
 
   return (
     <header className="absolute top-0 left-0 right-0 z-40 flex h-14 items-center px-6">

@@ -1,312 +1,450 @@
-import { useEffect, useRef, useState } from "react"
-import { CoinSelector } from "@/components/coin-selector"
-import { COIN_MAP } from "@/lib/mock-data"
+import { useEffect, useState } from "react"
+import { formatUnits, parseUnits } from "viem"
+import { toast } from "sonner"
 import {
-  hasApiKey,
-  fetchMinAmount,
-  fetchEstimate,
-  validateAddress,
-  createExchange,
-  type Quote,
-} from "@/lib/swap-api"
-import { usePrices } from "@/lib/prices"
-import { fmtUsd, fmtAmount } from "@/lib/format"
-import type { Route } from "@/lib/types"
-import { ArrowDown, ArrowRight, AlertCircle, Check, Loader2 } from "lucide-react"
+  SWAP_TOKENS,
+  ROUTER_ABI,
+  ERC20_ABI,
+  EXPLORER,
+  publicClient,
+  walletClient,
+  type SwapToken,
+} from "@/lib/web3"
+import { quoteBestRoute, venueLabel, type RoutePlan } from "@/lib/route-engine"
+import { useWallet, connectWallet, switchToSepolia } from "@/hooks/use-wallet"
+import { CryptoIcon } from "@/components/crypto-icon"
+import { fmtAmount } from "@/lib/format"
+import { ArrowDown, ArrowRight, Loader2, Wallet, AlertTriangle, Droplets, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-type Props = {
-  navigate: (to: Route) => void
-}
+const SLIPPAGE_BPS = 50n
+const GAS_BUFFER = 5_000_000_000_000_000n
 
-type AddrState = "idle" | "checking" | "valid" | "invalid"
-
-export function SwapWidget({ navigate }: Props) {
-  const [fromSymbol, setFromSymbol] = useState("SOL")
-  const [toSymbol, setToSymbol] = useState("BTC")
-  const [fromAmount, setFromAmount] = useState("2.5")
-  const [destAddress, setDestAddress] = useState("")
-  const [extraId, setExtraId] = useState("")
-
-  const [minAmount, setMinAmount] = useState<number | null>(null)
-  const [quote, setQuote] = useState<(Quote & { forAmount: number }) | null>(null)
+export function SwapWidget() {
+  const { hasProvider, account, connecting, onSepolia } = useWallet()
+  const [fromSym, setFromSym] = useState("ETH")
+  const [toSym, setToSym] = useState("zXMR")
+  const [amountIn, setAmountIn] = useState("1")
+  const [quoteOut, setQuoteOut] = useState<bigint | null>(null)
+  const [plan, setPlan] = useState<RoutePlan | null>(null)
   const [quoting, setQuoting] = useState(false)
-  const [quoteError, setQuoteError] = useState<string | null>(null)
+  const [quoteErr, setQuoteErr] = useState<string | null>(null)
+  const [busy, setBusy] = useState<string | null>(null)
+  const [fromBal, setFromBal] = useState<bigint | null>(null)
+  const [picker, setPicker] = useState<"from" | "to" | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  const [addrState, setAddrState] = useState<AddrState>("idle")
-  const [addrMessage, setAddrMessage] = useState<string | null>(null)
-  const [needsExtraId, setNeedsExtraId] = useState(false)
+  const from = SWAP_TOKENS.find((t) => t.symbol === fromSym)!
+  const to = SWAP_TOKENS.find((t) => t.symbol === toSym)!
+  const xmrInvolved = Boolean(from.comingSoon || to.comingSoon)
+  const amt = parseFloat(amountIn) || 0
 
-  const [creating, setCreating] = useState(false)
-  const [createError, setCreateError] = useState<string | null>(null)
-
-  const priceOf = usePrices()
-  const to = COIN_MAP[toSymbol]
-  const amt = parseFloat(fromAmount) || 0
-
-  const quoteSeq = useRef(0)
+  const connected = hasProvider && Boolean(account) && onSepolia
 
   useEffect(() => {
-    const seq = ++quoteSeq.current
-    setQuote(null)
-    setQuoteError(null)
-    setCreateError(null)
-    if (amt <= 0) {
+    if (!account) {
+      setFromBal(null)
+      return
+    }
+    let alive = true
+    const read = from.isNative
+      ? publicClient.getBalance({ address: account })
+      : from.address
+        ? publicClient.readContract({ address: from.address, abi: ERC20_ABI, functionName: "balanceOf", args: [account] })
+        : Promise.resolve(null)
+    read.then((b) => alive && setFromBal(b)).catch(() => {})
+    return () => { alive = false }
+  }, [account, from.address, from.isNative, refreshKey])
+
+  useEffect(() => {
+    setQuoteErr(null)
+    if (xmrInvolved || amt <= 0) {
+      setQuoteOut(null)
+      setPlan(null)
       setQuoting(false)
       return
     }
     setQuoting(true)
     const t = setTimeout(async () => {
       try {
-        const min = await fetchMinAmount(fromSymbol, toSymbol)
-        if (seq !== quoteSeq.current) return
-        setMinAmount(min)
-        if (amt < min) {
-          setQuoteError(`minimum is ${fmtAmount(min)} ${fromSymbol}`)
-          setQuoting(false)
-          return
+        const quote = await quoteBestRoute(from, to, parseUnits(amountIn as `${number}`, from.decimals))
+        if (!quote) {
+          setQuoteErr("no route / not enough liquidity")
+          setQuoteOut(null)
+          setPlan(null)
+        } else {
+          setQuoteOut(quote.amounts[quote.amounts.length - 1])
+          setPlan(quote.plan)
         }
-        const q = await fetchEstimate(fromSymbol, toSymbol, amt)
-        if (seq !== quoteSeq.current) return
-        setQuote({ ...q, forAmount: amt })
         setQuoting(false)
-      } catch (e) {
-        if (seq !== quoteSeq.current) return
-        setQuoteError(e instanceof Error ? e.message : "couldn't fetch a rate")
+      } catch {
+        setQuoteErr("no route / not enough liquidity")
+        setQuoteOut(null)
+        setPlan(null)
         setQuoting(false)
       }
-    }, 450)
+    }, 400)
     return () => clearTimeout(t)
-  }, [fromSymbol, toSymbol, amt])
+  }, [amountIn, from, to, xmrInvolved, refreshKey])
 
-  useEffect(() => {
-    setCreateError(null)
-    if (destAddress.trim().length < 8) {
-      setAddrState("idle")
-      setAddrMessage(null)
-      setNeedsExtraId(false)
-      return
+  const pick = (side: "from" | "to", sym: string) => {
+    if (side === "from") {
+      if (sym === toSym) setToSym(fromSym)
+      setFromSym(sym)
+    } else {
+      if (sym === fromSym) setFromSym(toSym)
+      setToSym(sym)
     }
-    setAddrState("checking")
-    const addr = destAddress.trim()
-    const t = setTimeout(async () => {
-      const check = await validateAddress(toSymbol, addr)
-      setAddrState(check.ok ? "valid" : "invalid")
-      setAddrMessage(check.ok ? null : check.message)
-      setNeedsExtraId(check.needsExtraId)
-    }, 500)
-    return () => clearTimeout(t)
-  }, [destAddress, toSymbol])
-
-  const fromUsd = amt * priceOf(fromSymbol)
-  const toUsd = (quote?.toAmount ?? 0) * priceOf(toSymbol)
-  const rate = quote && quote.forAmount > 0 ? quote.toAmount / quote.forAmount : null
-
-  const pickFrom = (s: string) => {
-    if (s === toSymbol) setToSymbol(fromSymbol)
-    setFromSymbol(s)
-  }
-  const pickTo = (s: string) => {
-    if (s === fromSymbol) setFromSymbol(toSymbol)
-    setToSymbol(s)
+    setPicker(null)
   }
 
-  const swap = () => {
-    setFromSymbol(toSymbol)
-    setToSymbol(fromSymbol)
-    if (quote) setFromAmount(fmtAmount(quote.toAmount).replace(/,/g, ""))
-    setDestAddress("")
-    setExtraId("")
+  const flip = () => {
+    setFromSym(toSym)
+    setToSym(fromSym)
+    setAmountIn(quoteOut ? formatUnits(quoteOut, to.decimals) : amountIn)
   }
 
-  const canExchange =
-    hasApiKey &&
-    !!quote &&
-    !quoting &&
-    !quoteError &&
-    destAddress.trim().length > 0 &&
-    addrState !== "invalid" &&
-    addrState !== "checking" &&
-    !creating
+  const rate = quoteOut && amt > 0 ? Number(formatUnits(quoteOut, to.decimals)) / amt : null
+  const minOut = quoteOut ? (quoteOut * (10_000n - SLIPPAGE_BPS)) / 10_000n : 0n
+  const overBalance = fromBal != null && amt > 0 && parseUnits((amountIn || "0") as `${number}`, from.decimals) > fromBal
 
-  const handleExchange = async () => {
-    if (!canExchange) return
-    setCreating(true)
-    setCreateError(null)
+  const sendTx = async (label: string, fn: () => Promise<`0x${string}`>) => {
+    const hash = await fn()
+    toast.loading(`${label} — waiting for Sepolia…`, { id: hash })
+    const receipt = await publicClient.waitForTransactionReceipt({ hash })
+    if (receipt.status !== "success") {
+      toast.error(`${label} reverted`, { id: hash })
+      throw new Error("reverted")
+    }
+    toast.success(
+      <span>
+        {label} confirmed ·{" "}
+        <a className="underline" href={`${EXPLORER}/tx/${hash}`} target="_blank" rel="noreferrer">explorer</a>
+      </span>,
+      { id: hash }
+    )
+  }
+
+  const friendlyError = (e: any): string | null => {
+    const msg = String(e?.shortMessage ?? e?.message ?? e)
+    if (/denied|rejected/i.test(msg)) return null
+    return msg.split("\n")[0].slice(0, 140)
+  }
+
+  const faucet = async () => {
+    if (!account || !from.address) return
+    setBusy("faucet")
     try {
-      const order = await createExchange({
-        fromSymbol,
-        toSymbol,
-        fromAmount: amt,
-        destinationAddress: destAddress.trim(),
-        extraId: extraId.trim() || undefined,
-      })
-      navigate({ name: "exchange", id: order.id })
+      const wc = walletClient(account)
+      await sendTx(`Minting test ${from.symbol}`, () =>
+        wc.writeContract({ address: from.address!, abi: ERC20_ABI, functionName: "faucet" })
+      )
+      setRefreshKey((k) => k + 1)
     } catch (e) {
-      setCreateError(e instanceof Error ? e.message : "could not create the swap")
+      const m = friendlyError(e)
+      if (m) toast.error(m)
     } finally {
-      setCreating(false)
+      setBusy(null)
     }
   }
+
+  const doSwap = async () => {
+    if (!account || !plan || !quoteOut) return
+    setBusy("swap")
+    try {
+      const wc = walletClient(account)
+      const inWei = parseUnits(amountIn as `${number}`, from.decimals)
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 1200)
+
+      if (!from.isNative) {
+        const allowance = (await publicClient.readContract({
+          address: from.address!, abi: ERC20_ABI, functionName: "allowance", args: [account, plan.router],
+        })) as bigint
+        if (allowance < inWei) {
+          await sendTx(`Approving ${from.symbol}`, () =>
+            wc.writeContract({ address: from.address!, abi: ERC20_ABI, functionName: "approve", args: [plan.router, inWei] })
+          )
+        }
+      }
+
+      await sendTx(`Swap ${from.symbol} → ${to.symbol}`, () => {
+        if (from.isNative) {
+          return wc.writeContract({
+            address: plan.router,
+            abi: ROUTER_ABI,
+            functionName: "swapExactETHForTokens",
+            args: [minOut, plan.path, account, deadline],
+            value: inWei,
+          })
+        }
+        if (to.isNative) {
+          return wc.writeContract({
+            address: plan.router,
+            abi: ROUTER_ABI,
+            functionName: "swapExactTokensForETH",
+            args: [inWei, minOut, plan.path, account, deadline],
+          })
+        }
+        return wc.writeContract({
+          address: plan.router,
+          abi: ROUTER_ABI,
+          functionName: "swapExactTokensForTokens",
+          args: [inWei, minOut, plan.path, account, deadline],
+        })
+      })
+      setRefreshKey((k) => k + 1)
+    } catch (e) {
+      const m = friendlyError(e)
+      if (m) toast.error(m)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const canSwap =
+    connected && !xmrInvolved && !!quoteOut && !!plan && !quoting && !quoteErr && amt > 0 && !overBalance && busy === null
 
   return (
-    <div className="w-full rounded-xl border border-border bg-card/60 p-5 backdrop-blur-md">
-
-      <div className="space-y-1.5">
-        <label className="text-[11px] text-muted-foreground">Send</label>
-        <div className="flex rounded-lg border border-input bg-background/50">
-          <input
-            type="text"
-            inputMode="decimal"
-            value={fromAmount}
-            onChange={(e) => setFromAmount(e.target.value)}
-            placeholder="0"
-            className="min-w-0 flex-1 bg-transparent px-3 py-3 text-base font-semibold tabular-nums focus-visible:outline-none"
-          />
-          <CoinSelector
-            value={fromSymbol}
-            onChange={pickFrom}
-            className="w-[110px] shrink-0 border-l border-input"
-            borderless
-          />
-        </div>
-        <div className="flex justify-between px-1 text-[11px] text-muted-foreground">
-          <span>≈ {fmtUsd(fromUsd)}</span>
-          <span>{minAmount != null ? `min ${fmtAmount(minAmount)} ${fromSymbol}` : " "}</span>
-        </div>
-      </div>
+    <div className="relative w-full rounded-xl border border-border bg-card/60 p-5 backdrop-blur-md">
+      <TokenField
+        label="You pay"
+        token={from}
+        amount={amountIn}
+        editable
+        onAmount={setAmountIn}
+        onPick={() => setPicker(picker === "from" ? null : "from")}
+        pickerOpen={picker === "from"}
+        exclude={to}
+        onSelect={(sym) => pick("from", sym)}
+        onClosePicker={() => setPicker(null)}
+        balance={fromBal}
+        onMax={() => {
+          if (fromBal == null) return
+          const spendable = from.isNative
+            ? fromBal > GAS_BUFFER ? fromBal - GAS_BUFFER : 0n
+            : fromBal
+          setAmountIn(formatUnits(spendable, from.decimals))
+        }}
+      />
 
       <div className="relative flex justify-center -my-2">
         <button
-          onClick={swap}
-          className="flex size-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-all hover:rotate-180 hover:text-foreground hover:border-foreground/30"
+          onClick={flip}
+          className="flex size-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-all hover:rotate-180 hover:border-foreground/30 hover:text-foreground"
           style={{ transitionDuration: "300ms" }}
         >
           <ArrowDown className="size-4" />
         </button>
       </div>
 
-      <div className="space-y-1.5">
-        <label className="text-[11px] text-muted-foreground">Receive</label>
-        <div className={cn(
-          "flex rounded-lg border bg-background/50",
-          quoteError ? "border-destructive/50" : "border-input"
-        )}>
-          <div className="flex min-w-0 flex-1 items-center px-3 py-3">
-            {quoting ? (
-              <Loader2 className="size-4 animate-spin text-muted-foreground" />
-            ) : quote ? (
-              <span className="truncate text-base font-semibold tabular-nums">≈ {fmtAmount(quote.toAmount)}</span>
-            ) : (
-              <span className="text-base font-semibold text-muted-foreground">0</span>
+      <TokenField
+        label="You receive"
+        token={to}
+        amount={
+          quoting ? "" : quoteOut != null ? fmtAmount(Number(formatUnits(quoteOut, to.decimals))) : ""
+        }
+        loading={quoting}
+        onPick={() => setPicker(picker === "to" ? null : "to")}
+        pickerOpen={picker === "to"}
+        exclude={from}
+        onSelect={(sym) => pick("to", sym)}
+        onClosePicker={() => setPicker(null)}
+      />
+
+      <div className="mt-2 min-h-4 px-1 text-[11px]">
+        {quoteErr ? (
+          <span className="text-destructive">{quoteErr}</span>
+        ) : rate ? (
+          <span className="text-muted-foreground">
+            1 {from.symbol} = {fmtAmount(rate)} {to.symbol}
+            {plan && <span className="ml-2 opacity-70">· {venueLabel(plan)}</span>}
+            <span className="ml-2 opacity-70">· 0.3% fee/hop</span>
+          </span>
+        ) : null}
+      </div>
+
+      {xmrInvolved && (
+        <div className="mt-3 flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/5 p-3 text-[11px] leading-relaxed text-muted-foreground">
+          <AlertTriangle className="mt-px size-3.5 shrink-0 text-warning" />
+          Native Monero (XMR) swaps route through the ZeroFi bridge, which is coming soon. Until then,
+          swap between the on-chain assets.
+        </div>
+      )}
+
+      {!hasProvider && (
+        <div className="mt-4 flex items-center gap-2 rounded-lg border border-border bg-background/40 p-3 text-[11px] text-muted-foreground">
+          <Wallet className="size-3.5" /> install MetaMask to swap on-chain.
+        </div>
+      )}
+
+      {hasProvider && !account && (
+        <button
+          onClick={connectWallet}
+          disabled={connecting}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-foreground py-3 text-sm font-bold uppercase tracking-wider text-background transition-all hover:bg-foreground/90 disabled:opacity-60"
+        >
+          {connecting ? <Loader2 className="size-4 animate-spin" /> : <Wallet className="size-4" />}
+          {connecting ? "check MetaMask…" : "Connect Wallet"}
+        </button>
+      )}
+
+      {hasProvider && account && !onSepolia && (
+        <button
+          onClick={switchToSepolia}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-warning py-3 text-sm font-bold uppercase tracking-wider text-warning-foreground"
+        >
+          <AlertTriangle className="size-4" /> Switch to Sepolia
+        </button>
+      )}
+
+      {connected && (
+        <>
+          <button
+            onClick={doSwap}
+            disabled={!canSwap}
+            className={cn(
+              "mt-4 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold uppercase tracking-wider transition-all",
+              canSwap
+                ? "bg-foreground text-background hover:bg-foreground/90 active:scale-[0.98]"
+                : "cursor-not-allowed bg-muted text-muted-foreground"
             )}
-          </div>
-          <CoinSelector
-            value={toSymbol}
-            onChange={pickTo}
-            exclude={fromSymbol}
-            className="w-[110px] shrink-0 border-l border-input"
-            borderless
-          />
-        </div>
-        <div className="flex justify-between px-1 text-[11px] text-muted-foreground">
-          <span>≈ {fmtUsd(toUsd)}</span>
-          <span>
-            {quoteError
-              ? <span className="text-destructive">{quoteError}</span>
-              : rate
-                ? `1 ${fromSymbol} = ${fmtAmount(rate)} ${toSymbol}`
-                : "live market rate"}
-          </span>
-        </div>
-      </div>
+          >
+            {busy === "swap" && <Loader2 className="size-4 animate-spin" />}
+            {busy === "swap"
+              ? "check MetaMask…"
+              : xmrInvolved
+                ? "Monero bridge coming soon"
+                : overBalance
+                  ? `insufficient ${from.symbol}`
+                  : "Swap"}
+            {canSwap && <ArrowRight className="size-4" />}
+          </button>
 
-      <div className="mt-4 space-y-1.5">
-        <label className="text-[11px] text-muted-foreground">
-          Destination address
-        </label>
-        <div className={cn(
-          "flex items-center rounded-lg border bg-background/50",
-          addrState === "invalid" ? "border-destructive/50" : "border-input"
-        )}>
-          <input
-            type="text"
-            value={destAddress}
-            onChange={(e) => setDestAddress(e.target.value)}
-            placeholder={`${to.name} (${to.network}) address`}
-            className="h-11 min-w-0 flex-1 bg-transparent px-3 text-sm font-mono focus-visible:outline-none"
-          />
-          <span className="pr-3">
-            {addrState === "checking" && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
-            {addrState === "valid" && <Check className="size-3.5 text-success" />}
-            {addrState === "invalid" && <AlertCircle className="size-3.5 text-destructive" />}
-          </span>
-        </div>
-        {addrState === "invalid" && addrMessage && (
-          <p className="px-1 text-[11px] text-destructive">{addrMessage.toLowerCase()}</p>
-        )}
-      </div>
-
-      {(needsExtraId || ["XRP", "ATOM"].includes(toSymbol)) && (
-        <div className="mt-3 space-y-1.5">
-          <label className="text-[11px] text-muted-foreground">
-            Memo / destination tag{needsExtraId ? "" : " (optional)"}
-          </label>
-          <input
-            type="text"
-            value={extraId}
-            onChange={(e) => setExtraId(e.target.value)}
-            placeholder={toSymbol === "XRP" ? "destination tag" : "memo"}
-            className="h-11 w-full rounded-lg border border-input bg-background/50 px-3 text-sm font-mono focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          />
-        </div>
-      )}
-
-      <div className="mt-4 flex items-center gap-1.5">
-        <span className="rounded-lg bg-secondary px-3 py-1.5 text-xs font-semibold text-foreground">
-          Float rate
-        </span>
-        <span className="ml-auto text-[11px] text-muted-foreground">
-          {quote?.speedForecast ? `ETA ${quote.speedForecast} min · ` : ""}all fees included
-        </span>
-      </div>
-
-      {quote?.warning && (
-        <p className="mt-2 flex items-start gap-1.5 px-1 text-[11px] text-warning">
-          <AlertCircle className="mt-px size-3 shrink-0" />
-          {quote.warning}
-        </p>
-      )}
-
-      <button
-        onClick={handleExchange}
-        disabled={!canExchange}
-        className={cn(
-          "mt-4 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold uppercase tracking-wider transition-all",
-          canExchange
-            ? "bg-foreground text-background hover:bg-foreground/90 active:scale-[0.98]"
-            : "cursor-not-allowed bg-muted text-muted-foreground"
-        )}
-      >
-        {creating ? <Loader2 className="size-4 animate-spin" /> : null}
-        {creating ? "creating swap..." : "Exchange now"}
-        {!creating && <ArrowRight className="size-4" />}
-      </button>
-
-      {createError && (
-        <p className="mt-2 flex items-start gap-1.5 px-1 text-[11px] text-destructive">
-          <AlertCircle className="mt-px size-3 shrink-0" />
-          {createError}
-        </p>
-      )}
-
-      {!hasApiKey && (
-        <p className="mt-3 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-          Rates shown are live. To enable real swaps, add a swap API key:
-          copy <span className="font-mono">.env.example</span> to <span className="font-mono">.env</span>,
-          paste your key, and restart the dev server.
-        </p>
+          {from.hasFaucet && (
+            <button
+              onClick={faucet}
+              disabled={busy !== null}
+              className="mt-2 flex w-full items-center justify-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+            >
+              {busy === "faucet" ? <Loader2 className="size-3 animate-spin" /> : <Droplets className="size-3" />}
+              mint test {from.symbol}
+            </button>
+          )}
+        </>
       )}
     </div>
+  )
+}
+
+function TokenField({
+  label, token, amount, editable, onAmount, onPick, loading, balance, onMax,
+  pickerOpen, exclude, onSelect, onClosePicker,
+}: {
+  label: string
+  token: SwapToken
+  amount: string
+  editable?: boolean
+  onAmount?: (v: string) => void
+  onPick: () => void
+  loading?: boolean
+  balance?: bigint | null
+  onMax?: () => void
+  pickerOpen: boolean
+  exclude: SwapToken
+  onSelect: (sym: string) => void
+  onClosePicker: () => void
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-[11px] text-muted-foreground">{label}</label>
+      <div className="flex rounded-lg border border-input bg-background/50">
+        <div className="flex min-w-0 flex-1 items-center px-3 py-3">
+          {loading ? (
+            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+          ) : editable ? (
+            <input
+              type="text"
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => onAmount?.(e.target.value)}
+              placeholder="0"
+              className="min-w-0 flex-1 bg-transparent text-base font-semibold tabular-nums focus-visible:outline-none"
+            />
+          ) : (
+            <span className="truncate text-base font-semibold tabular-nums text-muted-foreground">
+              {amount || "0"}
+            </span>
+          )}
+        </div>
+        <div className="relative shrink-0">
+          <button
+            onClick={onPick}
+            className="flex h-full items-center gap-1.5 border-l border-input px-3 text-sm font-bold transition-colors hover:bg-white/5"
+          >
+            <CryptoIcon symbol={token.icon} size={18} />
+            {token.symbol}
+            {token.comingSoon && <span className="rounded-sm bg-warning/20 px-1 text-[8px] uppercase text-warning">soon</span>}
+            <ChevronDown className={cn("size-3.5 text-muted-foreground transition-transform", pickerOpen && "rotate-180")} />
+          </button>
+          {pickerOpen && (
+            <TokenMenu exclude={exclude} onSelect={onSelect} onClose={onClosePicker} />
+          )}
+        </div>
+      </div>
+      {balance != null && (
+        <div className="flex justify-end px-1 text-[10px] text-muted-foreground">
+          balance {fmtAmount(Number(formatUnits(balance, token.decimals)))}
+          {onMax && (
+            <button onClick={onMax} className="ml-1.5 font-bold uppercase text-foreground/70 hover:text-foreground">
+              max
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TokenMenu({
+  exclude, onSelect, onClose,
+}: {
+  exclude: SwapToken
+  onSelect: (sym: string) => void
+  onClose: () => void
+}) {
+  const options = SWAP_TOKENS.filter(
+    (t) =>
+      t.symbol !== exclude.symbol &&
+      !(t.address && exclude.address && t.address === exclude.address)
+  )
+  return (
+    <>
+      <button className="fixed inset-0 z-40 cursor-default" aria-hidden onClick={onClose} />
+      <div
+        className="absolute right-0 top-full z-50 mt-1.5 w-60 overflow-hidden rounded-lg border border-border bg-popover shadow-xl"
+        style={{ animation: "fade-in-up 0.12s ease-out" }}
+      >
+        <div className="py-1">
+          {options.map((t) => (
+            <button
+              key={t.symbol}
+              onClick={() => onSelect(t.symbol)}
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-accent"
+            >
+              <CryptoIcon symbol={t.icon} size={22} />
+              <div className="flex min-w-0 flex-col">
+                <span className="text-sm font-bold text-foreground">{t.symbol}</span>
+                <span className="truncate text-[10px] text-muted-foreground">{t.name}</span>
+              </div>
+              {t.comingSoon && (
+                <span className="ml-auto shrink-0 rounded-sm bg-warning/20 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-warning">
+                  soon
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
   )
 }

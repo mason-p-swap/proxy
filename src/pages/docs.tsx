@@ -120,9 +120,9 @@ export function DocsPage({ navigate }: Props) {
               directly with the smart contract from your own wallet.
             </p>
             <p>
-              Four assets are currently listed: <B>WETH</B>, <B>DAI</B>, <B>USDC</B>, and{" "}
-              <B>USDT</B>. Each can be both supplied and borrowed. Interest rates adjust
-              automatically with how much of each pool is being borrowed.
+              Five assets are currently listed: <B>zXMR</B>, <B>WETH</B>, <B>DAI</B>,{" "}
+              <B>USDC</B>, and <B>USDT</B>. Each can be both supplied and borrowed. Interest
+              rates adjust automatically with how much of each pool is being borrowed.
             </p>
             <Callout>
               This is unaudited, educational software running on a test network. The tokens

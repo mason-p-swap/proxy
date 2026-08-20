@@ -11,7 +11,7 @@ import {
 const EDUCATION = [
   {
     q: "Which assets can I use?",
-    a: "The markets above list every supported asset — currently WETH, DAI, USDC, and USDT. You can supply any of them to earn yield, and use them as collateral to borrow another. More assets will be added over time.",
+    a: "The markets above list every supported asset — currently zXMR, WETH, DAI, USDC, and USDT. You can supply any of them to earn yield, and use them as collateral to borrow another. More assets will be added over time.",
   },
   {
     q: "How does lending work?",
@@ -23,7 +23,7 @@ const EDUCATION = [
   },
   {
     q: "What is collateral?",
-    a: "Collateral is the asset you lock up to guarantee your loan. If you never repay, the protocol can sell your collateral to cover the debt. Because crypto prices move, you can only borrow a fraction of your collateral's value — e.g. 80% for WETH, 75% for DAI.",
+    a: "Collateral is the asset you lock up to guarantee your loan. If you never repay, the protocol can sell your collateral to cover the debt. Because crypto prices move, you can only borrow a fraction of your collateral's value — e.g. 80% for WETH, 75% for DAI, 70% for zXMR.",
   },
   {
     q: "What is the health factor?",

@@ -5,11 +5,13 @@ import {Test} from "forge-std/Test.sol";
 import {Factory} from "../src/amm/Factory.sol";
 import {Router} from "../src/amm/Router.sol";
 import {Pair} from "../src/amm/Pair.sol";
+import {WETH9} from "../src/WETH9.sol";
 import {MockERC20} from "../src/mocks/MockERC20.sol";
 
 contract AmmTest is Test {
     Factory factory;
     Router router;
+    WETH9 weth9;
     MockERC20 zxmr;
     MockERC20 weth;
     MockERC20 usdc;
@@ -19,7 +21,8 @@ contract AmmTest is Test {
 
     function setUp() public {
         factory = new Factory(address(this));
-        router = new Router(address(factory));
+        weth9 = new WETH9();
+        router = new Router(address(factory), address(weth9));
 
         zxmr = new MockERC20("Wrapped Monero", "zXMR", 18, 0);
         weth = new MockERC20("Wrapped Ether", "WETH", 18, 0);
@@ -30,12 +33,21 @@ contract AmmTest is Test {
             zxmr.mint(u, 1_000_000e18);
             weth.mint(u, 1_000_000e18);
             usdc.mint(u, 1_000_000e18);
+            vm.deal(u, 1_000_000e18);
             vm.startPrank(u);
             zxmr.approve(address(router), type(uint256).max);
             weth.approve(address(router), type(uint256).max);
             usdc.approve(address(router), type(uint256).max);
+            weth9.approve(address(router), type(uint256).max);
             vm.stopPrank();
         }
+    }
+
+    function _seedEthPool(uint256 zxmrAmt, uint256 ethAmt) internal {
+        vm.startPrank(alice);
+        weth9.deposit{value: ethAmt}();
+        router.addLiquidity(address(zxmr), address(weth9), zxmrAmt, ethAmt, 0, 0, alice, block.timestamp + 1);
+        vm.stopPrank();
     }
 
     function _addLiquidity(address user, MockERC20 a, MockERC20 b, uint256 amtA, uint256 amtB) internal {
@@ -151,5 +163,90 @@ contract AmmTest is Test {
         factory.createPair(address(zxmr), address(weth));
         vm.expectRevert(Factory.PairExists.selector);
         factory.createPair(address(weth), address(zxmr));
+    }
+
+    function test_swapExactETHForTokens_matchesQuote() public {
+        _seedEthPool(10_000e18, 10_000e18);
+
+        address[] memory path = new address[](2);
+        path[0] = address(weth9);
+        path[1] = address(zxmr);
+        uint256[] memory expected = router.getAmountsOut(1e18, path);
+
+        uint256 before = zxmr.balanceOf(bob);
+        vm.prank(bob);
+        router.swapExactETHForTokens{value: 1e18}(0, path, bob, block.timestamp + 1);
+        assertEq(zxmr.balanceOf(bob) - before, expected[1]);
+        assertGt(expected[1], 0.9e18);
+        assertLt(expected[1], 1e18);
+    }
+
+    function test_swapExactTokensForETH_matchesQuoteAndPaysEth() public {
+        _seedEthPool(10_000e18, 10_000e18);
+
+        address[] memory path = new address[](2);
+        path[0] = address(zxmr);
+        path[1] = address(weth9);
+        uint256[] memory expected = router.getAmountsOut(1e18, path);
+
+        uint256 beforeEth = bob.balance;
+        vm.prank(bob);
+        router.swapExactTokensForETH(1e18, 0, path, bob, block.timestamp + 1);
+        assertEq(bob.balance - beforeEth, expected[1]);
+        assertGt(expected[1], 0.9e18);
+    }
+
+    function test_swapExactETHForTokens_multiHopToUsdc() public {
+        _seedEthPool(10_000e18, 10_000e18);
+        _addLiquidity(alice, zxmr, usdc, 10_000e18, 10_000e18);
+
+        address[] memory path = new address[](3);
+        path[0] = address(weth9);
+        path[1] = address(zxmr);
+        path[2] = address(usdc);
+        uint256[] memory expected = router.getAmountsOut(1e18, path);
+
+        uint256 before = usdc.balanceOf(bob);
+        vm.prank(bob);
+        router.swapExactETHForTokens{value: 1e18}(0, path, bob, block.timestamp + 1);
+        assertEq(usdc.balanceOf(bob) - before, expected[2]);
+        assertGt(expected[2], 0);
+    }
+
+    function test_swapExactETHForTokens_rejectsNonWethPath() public {
+        _seedEthPool(10_000e18, 10_000e18);
+        address[] memory path = new address[](2);
+        path[0] = address(zxmr);
+        path[1] = address(weth9);
+        vm.prank(bob);
+        vm.expectRevert(Router.InvalidPath.selector);
+        router.swapExactETHForTokens{value: 1e18}(0, path, bob, block.timestamp + 1);
+    }
+
+    function test_swapExactTokensForETH_rejectsNonWethTail() public {
+        _seedEthPool(10_000e18, 10_000e18);
+        address[] memory path = new address[](2);
+        path[0] = address(weth9);
+        path[1] = address(zxmr);
+        vm.prank(bob);
+        vm.expectRevert(Router.InvalidPath.selector);
+        router.swapExactTokensForETH(1e18, 0, path, bob, block.timestamp + 1);
+    }
+
+    function test_router_rejectsDirectEth() public {
+        vm.deal(bob, 1e18);
+        vm.prank(bob);
+        (bool ok,) = address(router).call{value: 1e18}("");
+        assertFalse(ok);
+    }
+
+    function test_swapExactETHForTokens_respectsMinOut() public {
+        _seedEthPool(10_000e18, 10_000e18);
+        address[] memory path = new address[](2);
+        path[0] = address(weth9);
+        path[1] = address(zxmr);
+        vm.prank(bob);
+        vm.expectRevert(Router.InsufficientOutputAmount.selector);
+        router.swapExactETHForTokens{value: 1e18}(1_000e18, path, bob, block.timestamp + 1);
     }
 }

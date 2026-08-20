@@ -4,13 +4,6 @@ import { sepolia } from "viem/chains"
 export const SEPOLIA_RPC = "https://ethereum-sepolia-rpc.publicnode.com"
 export const SEPOLIA_CHAIN_ID = sepolia.id
 
-export const ADDR = {
-  weth: "0x5b345423366e82a2ea1c0ba47a6036748c56780f" as Address,
-  usdc: "0xd60aa27fc84970d01c21f876d6cd612ef265adad" as Address,
-  oracle: "0xb08dd03a5a741d092e7747192dac82394c5c1d06" as Address,
-  pool: "0x08baf060638af6069bce0809f445f7575fa86ae1" as Address,
-} as const
-
 export const EXPLORER = "https://eth-sepolia.blockscout.com"
 
 export const publicClient = createPublicClient({ chain: sepolia, transport: http(SEPOLIA_RPC) })
@@ -26,19 +19,6 @@ export const ERC20_ABI = parseAbi([
   "function faucet()",
 ])
 
-export const POOL_ABI = parseAbi([
-  "function getMarketData() view returns (uint256 supplied, uint256 borrowed, uint256 liquidity, uint256 collateral, uint256 util, uint256 supplyApr, uint256 borrowApr)",
-  "function getUserData(address user) view returns (uint256 supplyBalance, uint256 debtBalance, uint256 collateralBalance, uint256 collateralUsd, uint256 debtUsd, uint256 hf, uint256 maxBorrow)",
-  "function liquidationPrice(address user) view returns (uint256)",
-  "function supply(uint256 amount)",
-  "function withdraw(uint256 amount)",
-  "function depositCollateral(uint256 amount)",
-  "function withdrawCollateral(uint256 amount)",
-  "function borrow(uint256 amount)",
-  "function repay(uint256 amount, address onBehalfOf)",
-  "function liquidate(address user, uint256 repayAmount) returns (uint256 collateralSeized)",
-])
-
 export const ORACLE_ABI = parseAbi([
   "function getPrice(address token) view returns (uint256)",
   "function setPrice(address token, uint256 price)",
@@ -50,11 +30,12 @@ export const ADDR_V2 = {
   dai: "0x88e8ba943d04b2de1b1c7e1a2b84e501d90333e1" as Address,
   usdc: "0x335ff97061154bf5372efb8c0b9b57f944279994" as Address,
   usdt: "0xa9ca2f149747ceb21a9ae707cb0a4380dba3ee02" as Address,
+  zxmr: "0xab79db732c51c398f7dddecd2cb4f7d9464e513a" as Address,
   oracle: "0x7bcea81573c4ce0e6b3c0ec1db8397219f24fe18" as Address,
   market: "0xd0f6a8fddc8b92553896e4525b842b57b266e94e" as Address,
 } as const
 
-export type MarketAssetKey = "weth" | "dai" | "usdc" | "usdt"
+export type MarketAssetKey = "weth" | "dai" | "usdc" | "usdt" | "zxmr"
 
 export const MARKET_ASSETS: {
   key: MarketAssetKey
@@ -63,6 +44,7 @@ export const MARKET_ASSETS: {
   icon: string
   decimals: number
 }[] = [
+  { key: "zxmr", symbol: "zXMR", name: "Wrapped Monero", icon: "zXMR", decimals: 18 },
   { key: "weth", symbol: "WETH", name: "Wrapped Ether", icon: "ETH", decimals: 18 },
   { key: "dai", symbol: "DAI", name: "Dai Stablecoin", icon: "DAI", decimals: 18 },
   { key: "usdc", symbol: "USDC", name: "USD Coin", icon: "USDC", decimals: 6 },
@@ -83,10 +65,44 @@ export const MARKET_ABI = parseAbi([
   "function liquidate(address user, address debtAsset, address collateralAsset, uint256 repayAmount) returns (uint256)",
 ])
 
+export const ADDR_AMM = {
+  zxmr: "0xab79db732c51c398f7dddecd2cb4f7d9464e513a" as Address,
+  factory: "0x9990d69a11cecf01b78d829ab4611d7405e08636" as Address,
+  router: "0x24ec2cfc4101787259ef2b4fd0400f6a25a01da6" as Address,
+  weth: "0x69cc6024c1d687997a95635f782eee1f5206e8bb" as Address,
+} as const
+
+export const UNISWAP_V2_ROUTER = "0xee567fe1712faf6149d80da1e6934e354124cfe3" as Address
+
+export type SwapToken = {
+  symbol: string
+  name: string
+  icon: string
+  decimals: number
+  address?: Address
+  hasFaucet?: boolean
+  comingSoon?: boolean
+  isNative?: boolean
+}
+
+export const SWAP_TOKENS: SwapToken[] = [
+  { symbol: "ETH", name: "Ethereum", icon: "ETH", decimals: 18, address: ADDR_AMM.weth, isNative: true },
+  { symbol: "WETH", name: "Wrapped Ether", icon: "ETH", decimals: 18, address: ADDR_AMM.weth },
+  { symbol: "zXMR", name: "Wrapped Monero", icon: "zXMR", decimals: 18, address: ADDR_AMM.zxmr, hasFaucet: true },
+  { symbol: "USDC", name: "USD Coin", icon: "USDC", decimals: 6, address: ADDR_V2.usdc, hasFaucet: true },
+  { symbol: "USDT", name: "Tether USD", icon: "USDT", decimals: 6, address: ADDR_V2.usdt, hasFaucet: true },
+  { symbol: "DAI", name: "Dai Stablecoin", icon: "DAI", decimals: 18, address: ADDR_V2.dai, hasFaucet: true },
+  { symbol: "XMR", name: "Monero", icon: "XMR", decimals: 12, comingSoon: true },
+]
+
+export const ROUTER_ABI = parseAbi([
+  "function getAmountsOut(uint256 amountIn, address[] path) view returns (uint256[])",
+  "function swapExactTokensForTokens(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline) returns (uint256[])",
+  "function swapExactETHForTokens(uint256 amountOutMin, address[] path, address to, uint256 deadline) payable returns (uint256[])",
+  "function swapExactTokensForETH(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline) returns (uint256[])",
+])
+
 export const WAD = 10n ** 18n
-export const ORACLE_PRECISION = 10n ** 8n
-export const WETH_DECIMALS = 18
-export const USDC_DECIMALS = 6
 
 export const MAX_UINT = 2n ** 256n - 1n
 

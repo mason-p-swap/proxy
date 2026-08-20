@@ -6,10 +6,16 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {Factory} from "./Factory.sol";
 import {Pair} from "./Pair.sol";
 
+interface IWETH {
+    function deposit() external payable;
+    function withdraw(uint256) external;
+}
+
 contract Router {
     using SafeERC20 for IERC20;
 
     address public immutable factory;
+    address public immutable WETH;
 
     uint256 private constant FEE_NUMERATOR = 997;
     uint256 private constant FEE_DENOMINATOR = 1000;
@@ -23,14 +29,20 @@ contract Router {
     error InsufficientOutputAmount();
     error InsufficientBAmount();
     error InsufficientAAmount();
+    error EthTransferFailed();
 
     modifier ensure(uint256 deadline) {
         if (block.timestamp > deadline) revert Expired();
         _;
     }
 
-    constructor(address factory_) {
+    constructor(address factory_, address weth_) {
         factory = factory_;
+        WETH = weth_;
+    }
+
+    receive() external payable {
+        if (msg.sender != WETH) revert EthTransferFailed();
     }
 
     function sortTokens(address tokenA, address tokenB) public pure returns (address token0, address token1) {
@@ -148,6 +160,38 @@ contract Router {
         if (amounts[amounts.length - 1] < amountOutMin) revert InsufficientOutputAmount();
         IERC20(path[0]).safeTransferFrom(msg.sender, pairFor(path[0], path[1]), amounts[0]);
         _swap(amounts, path, to);
+    }
+
+    function swapExactETHForTokens(uint256 amountOutMin, address[] calldata path, address to, uint256 deadline)
+        external
+        payable
+        ensure(deadline)
+        returns (uint256[] memory amounts)
+    {
+        if (path[0] != WETH) revert InvalidPath();
+        amounts = getAmountsOut(msg.value, path);
+        if (amounts[amounts.length - 1] < amountOutMin) revert InsufficientOutputAmount();
+        IWETH(WETH).deposit{value: amounts[0]}();
+        IERC20(WETH).safeTransfer(pairFor(path[0], path[1]), amounts[0]);
+        _swap(amounts, path, to);
+    }
+
+    function swapExactTokensForETH(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external ensure(deadline) returns (uint256[] memory amounts) {
+        if (path[path.length - 1] != WETH) revert InvalidPath();
+        amounts = getAmountsOut(amountIn, path);
+        uint256 amountOut = amounts[amounts.length - 1];
+        if (amountOut < amountOutMin) revert InsufficientOutputAmount();
+        IERC20(path[0]).safeTransferFrom(msg.sender, pairFor(path[0], path[1]), amounts[0]);
+        _swap(amounts, path, address(this));
+        IWETH(WETH).withdraw(amountOut);
+        (bool ok,) = to.call{value: amountOut}("");
+        if (!ok) revert EthTransferFailed();
     }
 
     function _swap(uint256[] memory amounts, address[] calldata path, address _to) private {

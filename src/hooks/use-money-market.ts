@@ -121,15 +121,19 @@ export function useMoneyMarket() {
       try {
         const results = await Promise.all(
           MARKET_ASSETS.map((a) =>
-            publicClient.readContract({
-              address: ADDR_V2.market, abi: MARKET_ABI, functionName: "getReserveData", args: [ADDR_V2[a.key]],
-            })
+            publicClient
+              .readContract({
+                address: ADDR_V2.market, abi: MARKET_ABI, functionName: "getReserveData", args: [ADDR_V2[a.key]],
+              })
+              .catch(() => null)
           )
         )
         if (!alive) return
         const next: Partial<Record<MarketAssetKey, ReserveData>> = {}
         MARKET_ASSETS.forEach((a, i) => {
-          const [supplied, borrowed, liquidity, util, supplyApr, borrowApr, price] = results[i]
+          const r = results[i]
+          if (!r) return
+          const [supplied, borrowed, liquidity, util, supplyApr, borrowApr, price] = r
           next[a.key] = { supplied, borrowed, liquidity, util, supplyApr, borrowApr, price }
         })
         setReserves(next)
@@ -152,12 +156,16 @@ export function useMoneyMarket() {
             address: ADDR_V2.market, abi: MARKET_ABI, functionName: "getUserAccountData", args: [account],
           }),
           ...MARKET_ASSETS.flatMap((a) => [
-            publicClient.readContract({
-              address: ADDR_V2.market, abi: MARKET_ABI, functionName: "getUserReserveData", args: [ADDR_V2[a.key], account],
-            }),
-            publicClient.readContract({
-              address: ADDR_V2[a.key], abi: ERC20_ABI, functionName: "balanceOf", args: [account],
-            }),
+            publicClient
+              .readContract({
+                address: ADDR_V2.market, abi: MARKET_ABI, functionName: "getUserReserveData", args: [ADDR_V2[a.key], account],
+              })
+              .catch(() => null),
+            publicClient
+              .readContract({
+                address: ADDR_V2[a.key], abi: ERC20_ABI, functionName: "balanceOf", args: [account],
+              })
+              .catch(() => null),
           ]),
         ])
         if (!alive) return
@@ -166,11 +174,13 @@ export function useMoneyMarket() {
         setAccountData({ collateralUsd, debtUsd, powerUsd, availableUsd, hf })
         const next: Partial<Record<MarketAssetKey, UserReserve>> = {}
         MARKET_ASSETS.forEach((a, i) => {
+          const reserve = perAsset[i * 2]
+          if (!reserve) return
           const [supplyBalance, debtBalance, usingAsCollateral] =
-            perAsset[i * 2] as readonly [bigint, bigint, boolean]
+            reserve as readonly [bigint, bigint, boolean]
           next[a.key] = {
             supplyBalance, debtBalance, usingAsCollateral,
-            walletBalance: perAsset[i * 2 + 1] as bigint,
+            walletBalance: (perAsset[i * 2 + 1] as bigint | null) ?? 0n,
           }
         })
         setUserReserves(next)

@@ -28,45 +28,45 @@ type Props = {
 const SWAP_STEPS: { n: string; title: string; desc: string; Illo: ComponentType }[] = [
   {
     n: "01",
-    title: "Deposit",
-    desc: "Pick your pair and send coins to the one-time address we generate.",
+    title: "Connect",
+    desc: "Connect your wallet. No account, no sign-up — just approve the connection.",
     Illo: DepositIllo,
   },
   {
     n: "02",
-    title: "Confirmation",
-    desc: "We watch the chain and lock your rate the moment your transaction confirms.",
+    title: "Confirm",
+    desc: "Pick your pair and amount, then confirm the swap in your wallet.",
     Illo: ConfirmIllo,
   },
   {
     n: "03",
-    title: "Payout",
-    desc: "Coins are exchanged and sent straight to your wallet.",
+    title: "Receive",
+    desc: "Tokens land in your wallet the moment the transaction confirms on-chain.",
     Illo: PayoutIllo,
   },
 ]
 
 const POPULAR_PAIRS: [string, string][] = [
-  ["SOL", "BTC"],
-  ["ETH", "USDT"],
-  ["BTC", "LTC"],
-  ["USDT", "SOL"],
-  ["ETH", "BTC"],
-  ["DOGE", "USDT"],
+  ["zXMR", "WETH"],
+  ["zXMR", "USDC"],
+  ["WETH", "USDC"],
+  ["USDC", "USDT"],
+  ["zXMR", "XMR"],
+  ["ETH", "XMR"],
 ]
 
 const FAQ_TEASER = [
   {
     q: "Do I need an account?",
-    a: "No. Every swap is anonymous — pick your coins, enter a destination address, and send. There's nothing to register and nothing to verify.",
+    a: "No. Connect your wallet and swap — nothing to register, no email, no KYC.",
   },
   {
     q: "How long does a swap take?",
-    a: "Most swaps finish in under 4 minutes. The exact time depends on block confirmation speed for the networks involved.",
+    a: "Swaps settle in a single on-chain transaction — usually a few seconds once it confirms.",
   },
   {
     q: "What are the fees?",
-    a: "The fee is already baked into the rate you see — no hidden charges. Fixed-rate swaps include a small premium (0.5%) for the rate guarantee.",
+    a: "A flat 0.3% fee per hop, baked into the quote you see. No hidden spread.",
   },
 ]
 
@@ -107,7 +107,7 @@ export function HomePage({ navigate }: Props) {
           className="relative w-full max-w-md"
           style={{ animation: "fade-in-up 0.6s ease-out 0.15s both" }}
         >
-          <SwapWidget navigate={navigate} />
+          <SwapWidget />
         </div>
       </section>
 
@@ -196,23 +196,23 @@ export function HomePage({ navigate }: Props) {
           <div className="grid gap-3 md:grid-cols-2 md:gap-4">
             {[
               {
-                title: "Locked rates",
-                desc: "Fix your rate for 30 minutes and volatility becomes someone else's problem.",
+                title: "Our own pools",
+                desc: "Swaps route through pools we run, so the price you get is live and on-chain.",
                 Illo: RateLockIllo,
               },
               {
                 title: "Non-custodial",
-                desc: "Coins go from your wallet to a one-time address and out again. We never hold balances.",
+                desc: "Coins move straight from your wallet through the pool and back. We never hold balances.",
                 Illo: CustodyIllo,
               },
               {
-                title: "Cross-chain",
-                desc: "Move value across 8 networks in one hop — no bridges to babysit.",
+                title: "Monero bridge",
+                desc: "Swap all the way to native Monero through the ZeroFi bridge. Coming soon.",
                 Illo: ChainIllo,
               },
               {
-                title: "On-chain tracking",
-                desc: "Every order gets an ID you can follow from deposit to payout.",
+                title: "Low fees",
+                desc: "A flat 0.3% fee per hop — the same model the biggest DEXes run on.",
                 Illo: TrackingIllo,
               },
             ].map((f) => (
@@ -277,15 +277,14 @@ export function HomePage({ navigate }: Props) {
             Ready when you are.
           </h2>
           <p className="mt-5 max-w-sm text-sm leading-relaxed text-muted-foreground">
-            Pick a pair, paste an address, send the deposit. A few minutes later it's in your
-            wallet.
+            Pick a pair, connect your wallet, and swap. It settles on-chain in seconds.
           </p>
           <div className="mt-10 flex items-center gap-6">
             <button
               onClick={scrollToWidget}
               className="inline-flex items-center gap-2 rounded-full bg-primary px-8 py-3.5 text-sm font-bold text-primary-foreground transition-transform hover:scale-[1.04]"
             >
-              Start exchanging
+              Start swapping
               <ArrowRight className="size-4" />
             </button>
             <button

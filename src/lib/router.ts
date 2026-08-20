@@ -6,8 +6,6 @@ export function parseHash(hash: string): Route {
   const parts = clean.split("/").filter(Boolean)
 
   if (parts.length === 0) return { name: "home" }
-  if (parts[0] === "exchange" && parts[1]) return { name: "exchange", id: parts[1] }
-  if (parts[0] === "lookup") return { name: "lookup" }
   if (parts[0] === "markets") return { name: "markets" }
   if (parts[0] === "defi") return { name: "defi" }
   if (parts[0] === "dashboard") return { name: "dashboard" }
@@ -25,8 +23,6 @@ export function parseHash(hash: string): Route {
 export function routeToHash(route: Route): string {
   switch (route.name) {
     case "home": return "#/"
-    case "exchange": return `#/exchange/${route.id}`
-    case "lookup": return "#/lookup"
     case "markets": return "#/markets"
     case "defi": return "#/defi"
     case "dashboard": return "#/dashboard"

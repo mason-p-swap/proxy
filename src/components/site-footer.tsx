@@ -10,7 +10,6 @@ const LINKS: { label: string; route: Route }[] = [
   { label: "Markets", route: { name: "markets" } },
   { label: "How it works", route: { name: "how" } },
   { label: "FAQ", route: { name: "faq" } },
-  { label: "Find order", route: { name: "lookup" } },
 ]
 
 export function SiteFooter({ navigate }: Props) {

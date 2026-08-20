@@ -6,6 +6,8 @@ const ICON_BASE =
 
 const OVERRIDES: Record<string, string> = {
   busd: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/icon/usdc.png",
+  weth: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/icon/eth.png",
+  zxmr: "/zXMR_logo_256.png",
 }
 
 const TICKER_FALLBACK: Record<string, string> = {
@@ -29,6 +31,9 @@ const TICKER_FALLBACK: Record<string, string> = {
   busd: "#f0b90b",
   usdc: "#2775ca",
   wbtc: "#f09242",
+  weth: "#627eea",
+  xmr: "#ff6600",
+  zxmr: "#f5883e",
 }
 
 type Props = {
@@ -37,12 +42,14 @@ type Props = {
   className?: string
 }
 
+const MAX_RETRIES = 2
+
 export function CryptoIcon({ symbol, size = 24, className }: Props) {
-  const [errored, setErrored] = useState(false)
+  const [attempt, setAttempt] = useState(0)
   const sym = symbol.toLowerCase()
   const color = TICKER_FALLBACK[sym] ?? "#888"
 
-  if (errored || !sym) {
+  if (attempt > MAX_RETRIES || !sym) {
     return (
       <div
         className={cn("flex shrink-0 items-center justify-center rounded-full font-bold uppercase", className)}
@@ -53,16 +60,17 @@ export function CryptoIcon({ symbol, size = 24, className }: Props) {
     )
   }
 
-  const src = OVERRIDES[sym] ?? `${ICON_BASE}/${sym}.png`
+  const base = OVERRIDES[sym] ?? `${ICON_BASE}/${sym}.png`
+  const src = attempt === 0 ? base : `${base}${base.includes("?") ? "&" : "?"}retry=${attempt}`
 
   return (
     <img
+      key={src}
       src={src}
       alt={symbol}
       width={size}
       height={size}
-      loading="lazy"
-      onError={() => setErrored(true)}
+      onError={() => setAttempt((a) => a + 1)}
       className={cn("shrink-0 rounded-full object-cover", className)}
       style={{ width: size, height: size }}
     />

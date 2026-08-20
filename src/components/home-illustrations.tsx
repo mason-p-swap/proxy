@@ -89,9 +89,9 @@ export function DepositIllo() {
           ["78%", "24%", "50%", "58%"],
         ]}
       />
-      <CoinNode x="22%" y="24%" symbol="SOL" />
+      <CoinNode x="22%" y="24%" symbol="zXMR" />
       <CoinNode x="50%" y="20%" symbol="ETH" />
-      <CoinNode x="78%" y="24%" symbol="BTC" />
+      <CoinNode x="78%" y="24%" symbol="XMR" />
       <Node x="50%" y="58%">
         <Wallet className="size-4" />
       </Node>
@@ -113,7 +113,7 @@ export function ConfirmIllo() {
           ["26%", "74%", "50%", "48%"],
         ]}
       />
-      <CoinNode x="20%" y="28%" symbol="BTC" />
+      <CoinNode x="20%" y="28%" symbol="zXMR" />
       <CoinNode x="80%" y="30%" symbol="ETH" />
       <CoinNode x="26%" y="74%" symbol="USDT" />
       <Node x="50%" y="48%">
@@ -154,7 +154,7 @@ export function RateLockIllo() {
     <div className="dot-grid relative flex h-40 flex-col items-center justify-center gap-3.5 px-6" aria-hidden>
       <Chip className="px-3 py-1.5 text-[11px] text-foreground">
         <Lock className="size-3 text-muted-foreground" />
-        1 SOL = 0.002640 BTC
+        1 ETH = 12.4470 zXMR
       </Chip>
       <div className="h-1 w-full max-w-[180px] overflow-hidden rounded-full bg-white/10">
         <div
@@ -203,14 +203,14 @@ export function ChainIllo() {
           ["80%", "74%", "50%", "46%"],
         ]}
       />
-      <CoinNode x="20%" y="22%" symbol="BTC" />
-      <CoinNode x="80%" y="22%" symbol="SOL" />
-      <CoinNode x="20%" y="74%" symbol="ETH" />
-      <CoinNode x="80%" y="74%" symbol="LTC" />
+      <CoinNode x="20%" y="22%" symbol="ETH" />
+      <CoinNode x="80%" y="22%" symbol="XMR" />
+      <CoinNode x="20%" y="74%" symbol="USDC" />
+      <CoinNode x="80%" y="74%" symbol="zXMR" />
       <Node x="50%" y="46%">
         <Route className="size-4" />
       </Node>
-      <Chip className="absolute bottom-3 left-1/2 -translate-x-1/2">8 networks</Chip>
+      <Chip className="absolute bottom-3 left-1/2 -translate-x-1/2">ethereum ⇄ monero</Chip>
     </div>
   )
 }

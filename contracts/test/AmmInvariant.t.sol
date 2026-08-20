@@ -5,6 +5,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {Factory} from "../src/amm/Factory.sol";
 import {Router} from "../src/amm/Router.sol";
 import {Pair} from "../src/amm/Pair.sol";
+import {WETH9} from "../src/WETH9.sol";
 import {MockERC20} from "../src/mocks/MockERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -62,7 +63,7 @@ contract AmmInvariantTest is Test {
 
     function setUp() public {
         factory = new Factory(address(this));
-        router = new Router(address(factory));
+        router = new Router(address(factory), address(new WETH9()));
         token0 = new MockERC20("A", "A", 18, 0);
         token1 = new MockERC20("B", "B", 18, 0);
 

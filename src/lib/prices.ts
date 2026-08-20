@@ -2,24 +2,13 @@ import { useEffect, useSyncExternalStore } from "react"
 import { COIN_MAP } from "./mock-data"
 
 const CG_IDS: Record<string, string> = {
-  BTC: "bitcoin",
   ETH: "ethereum",
-  SOL: "solana",
-  BNB: "binancecoin",
-  XRP: "ripple",
+  WETH: "ethereum",
+  zXMR: "monero",
+  XMR: "monero",
   USDT: "tether",
   USDC: "usd-coin",
-  ADA: "cardano",
-  DOGE: "dogecoin",
-  MATIC: "matic-network",
-  LINK: "chainlink",
-  AVAX: "avalanche-2",
-  LTC: "litecoin",
-  ATOM: "cosmos",
-  TRX: "tron",
   DAI: "dai",
-  UNI: "uniswap",
-  ARB: "arbitrum",
 }
 
 let livePrices: Record<string, number> = {}
@@ -36,7 +25,7 @@ function getSnapshot(): Record<string, number> {
 
 async function refresh(): Promise<void> {
   try {
-    const ids = Object.values(CG_IDS).join(",")
+    const ids = [...new Set(Object.values(CG_IDS))].join(",")
     const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`)
     if (!res.ok) return
     const data = await res.json()
