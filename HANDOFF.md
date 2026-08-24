@@ -128,4 +128,35 @@ invariants, ETH-path tests). All green.
 ## Known testnet limitations
 - Tokens are valueless mocks; faucets are enabled and must be removed for production.
 - Pool depth is small (seeded from faucet ETH), so large swaps show high price impact.
-- **Not audited.** A professional audit is required before any real-value deployment.
+- **Not audited.** A professional audit is strongly recommended before any real-value deployment.
+
+## Before mainnet — required hardening
+
+These do not affect testnet use, but must be handled before the contracts hold real funds.
+
+### 1. Deploy fresh from current source
+The **live Sepolia money market** (`0xD0f6A8fdDc8B92553896E4525B842B57b266e94E`) was deployed
+before the security-hardening commits (`3c0ed5a`, `ebdb790`, `e36ace5`) and was never
+redeployed — a deployed contract cannot be patched in place. The **source in this repo is the
+hardened version**; the live testnet contract is not. This resolves itself on a production
+deploy: deploy mainnet from the current `main` branch and the live contract will include every
+fix. Do not reuse the existing testnet bytecode.
+
+### 2. Move ownership off a single key
+Every ownable contract is currently owned by one EOA
+(`0x86F173DABd543068f05D8c2e1f8eDCaEB2CBa1ca`). That owner can, on the money market and oracle:
+- set any asset's price (`setFixedPrice` / `setOverride`) — a wrong or malicious price can
+  drain the pools or force liquidations,
+- `pause` the protocol,
+- `withdrawTreasury`,
+- change risk parameters (`configureReserve`).
+
+On mainnet a single key is a catastrophic single point of failure (theft, loss, or phishing of
+that one key compromises the whole protocol). Transfer ownership to a **multisig** (e.g. a 2-of-3
+Safe) and/or put owner actions behind a **timelock** so changes are delayed and publicly visible
+before they take effect.
+
+### 3. Real tokens + real oracle
+Replace the mock tokens with mainnet USDC/DAI/USDT/WETH, and replace every fixed oracle price
+(including zXMR's) with a real feed — see [What's left for the zXMR owner](#whats-left-for-the-zxmr-owner).
+Remove all token faucets before deploying.
