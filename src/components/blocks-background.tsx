@@ -21,7 +21,7 @@ export function BlocksBackground() {
         dur: 6 + rand(i + 1) * 7,
         delay: -rand(i + 101) * 13,
         rise: 10 + rand(i + 501) * 42,
-        light: 0.11 + rand(i + 901) * 0.07,
+        light: 0.88 + rand(i + 901) * 0.07,
       })),
     []
   )
@@ -38,7 +38,7 @@ export function BlocksBackground() {
                 "--dur": `${c.dur.toFixed(2)}s`,
                 "--delay": `${c.delay.toFixed(2)}s`,
                 "--rise": `${c.rise.toFixed(0)}px`,
-                "--face": `oklch(${c.light.toFixed(3)} 0 0)`,
+                "--face": `oklch(${c.light.toFixed(3)} 0.05 70)`,
               } as CSSProperties
             }
           >
@@ -52,7 +52,7 @@ export function BlocksBackground() {
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 90% 75% at 50% 42%, transparent 0%, oklch(0 0 0 / 0.4) 55%, oklch(0 0 0 / 0.88) 100%)",
+            "radial-gradient(ellipse 90% 75% at 50% 42%, transparent 0%, oklch(0.965 0.028 78 / 0.35) 55%, oklch(0.965 0.028 78 / 0.9) 100%)",
         }}
       />
     </div>

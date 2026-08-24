@@ -36,10 +36,9 @@ Scripts write and dry-run; the owner reviews and broadcasts. Never put private k
 - **No comments in code** — TS/TSX, CSS, HTML, config, and Solidity. The only exception is
   the `// SPDX-License-Identifier` header required in `.sol` files. Prefer self-explanatory
   names; put explanations in chat/commits/docs, not inline.
-- **The peach/cream theme is test-only and stays uncommitted.** Three files carry it —
-  `index.html`, `src/index.css`, `src/components/blocks-background.tsx`. They are intentionally
-  left modified-but-unstaged; the committed theme is the original dark one. Do not commit the
-  peach changes unless the owner explicitly asks.
+- **Theme:** the app ships a cream/peach light theme (Plus Jakarta Sans), defined in
+  `index.html`, `src/index.css`, and `src/components/blocks-background.tsx`. This is the
+  committed default.
 - The money market is an original multi-asset lending implementation.
 
 ## No env vars
