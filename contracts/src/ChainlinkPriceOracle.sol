@@ -7,6 +7,7 @@ import {AggregatorV3Interface} from "./interfaces/AggregatorV3Interface.sol";
 
 contract ChainlinkPriceOracle is IPriceOracle, Ownable {
     uint256 public constant TARGET_DECIMALS = 8;
+    uint256 public constant DEFAULT_MAX_STALENESS = 24 hours;
 
     struct Feed {
         address aggregator;
@@ -81,7 +82,8 @@ contract ChainlinkPriceOracle is IPriceOracle, Ownable {
                 AggregatorV3Interface(f.aggregator).latestRoundData();
             if (answer <= 0) revert InvalidAggregatorPrice(token, answer);
             if (updatedAt == 0 || answeredInRound < roundId) revert IncompleteRound(token);
-            if (maxStaleness != 0 && block.timestamp - updatedAt > maxStaleness) {
+            uint256 stalenessBound = maxStaleness == 0 ? DEFAULT_MAX_STALENESS : maxStaleness;
+            if (block.timestamp - updatedAt > stalenessBound) {
                 revert StalePrice(token, updatedAt);
             }
             return _scale(uint256(answer), f.aggregatorDecimals);

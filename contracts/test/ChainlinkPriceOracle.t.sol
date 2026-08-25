@@ -96,10 +96,19 @@ contract ChainlinkPriceOracleTest is Test {
         oracle.getPrice(weth);
     }
 
-    function test_staleness_disabled_byDefault() public {
+    function test_staleness_defaultBoundApplies_whenUnset() public {
         vm.prank(owner);
         oracle.setAggregator(weth, address(ethFeed));
-        vm.warp(block.timestamp + 30 days);
+        assertEq(oracle.getPrice(weth), 3_500e8);
+        vm.warp(block.timestamp + oracle.DEFAULT_MAX_STALENESS() + 1);
+        vm.expectRevert(abi.encodeWithSelector(ChainlinkPriceOracle.StalePrice.selector, weth, uint256(1_000_000)));
+        oracle.getPrice(weth);
+    }
+
+    function test_staleness_freshWithinDefaultBound() public {
+        vm.prank(owner);
+        oracle.setAggregator(weth, address(ethFeed));
+        vm.warp(block.timestamp + oracle.DEFAULT_MAX_STALENESS() - 1);
         assertEq(oracle.getPrice(weth), 3_500e8);
     }
 

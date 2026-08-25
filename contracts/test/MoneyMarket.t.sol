@@ -86,10 +86,56 @@ contract MoneyMarketTest is Test {
         });
     }
 
+    function _cfg(
+        uint16 ltv,
+        uint16 lt,
+        uint16 bonus,
+        uint16 rf,
+        uint64 base,
+        uint64 s1,
+        uint64 s2,
+        uint64 opt,
+        bool collateral
+    ) internal pure returns (MoneyMarket.ReserveConfig memory) {
+        MoneyMarket.ReserveConfig memory c = _cfg(ltv, lt, bonus, rf, base, s1, s2, opt);
+        c.collateral = collateral;
+        return c;
+    }
+
     function test_listReserve_rejectsDuplicates() public {
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(MoneyMarket.AlreadyListed.selector, address(weth)));
         market.listReserve(address(weth), _cfg(8000, 8250, 500, 1500, 0, 0.033e18, 0.80e18, 0.80e18));
+    }
+
+    function test_listReserve_rejectsUncurableLiquidationConfig() public {
+        MockERC20 t = new MockERC20("T", "T", 18, 1e18);
+        vm.prank(admin);
+        vm.expectRevert(MoneyMarket.InvalidParams.selector);
+        market.listReserve(address(t), _cfg(9000, 9500, 1000, 1500, 0, 0.033e18, 0.80e18, 0.80e18));
+    }
+
+    function test_listReserve_acceptsTightButCurableConfig() public {
+        MockERC20 t = new MockERC20("T", "T", 18, 1e18);
+        vm.prank(admin);
+        market.listReserve(address(t), _cfg(9000, 9000, 500, 1500, 0, 0.033e18, 0.80e18, 0.80e18));
+    }
+
+    function test_withdraw_checksHealthEvenWhenReserveCollateralFlagOff() public {
+        vm.prank(bob);
+        market.supply(address(usdc), 100_000e6);
+
+        vm.startPrank(alice);
+        market.supply(address(weth), 1e18);
+        market.borrow(address(usdc), 2000e6);
+        vm.stopPrank();
+
+        vm.prank(admin);
+        market.configureReserve(address(weth), _cfg(8000, 8250, 500, 1500, 0, 0.033e18, 0.80e18, 0.80e18, false));
+
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(MoneyMarket.WouldBreakHealth.selector, uint256(0)));
+        market.withdraw(address(weth), type(uint256).max);
     }
 
     function test_listReserve_rejectsLtvAboveThreshold() public {

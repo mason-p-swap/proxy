@@ -186,6 +186,9 @@ contract MoneyMarket is ReentrancyGuard, Ownable, Pausable {
         if (cfg.reserveFactorBps >= BPS) revert InvalidParams();
         if (cfg.optimalUtil == 0 || cfg.optimalUtil >= WAD) revert InvalidParams();
         if (cfg.collateral && cfg.liqThresholdBps == 0) revert InvalidParams();
+        if (cfg.collateral && uint256(cfg.liqThresholdBps) * (BPS + uint256(cfg.liqBonusBps)) >= BPS * BPS) {
+            revert InvalidParams();
+        }
     }
 
     function accrue(address asset) public {
@@ -259,10 +262,8 @@ contract MoneyMarket is ReentrancyGuard, Ownable, Pausable {
         scaledSupplyOf[asset][msg.sender] -= scaled;
         s.totalScaledSupply -= _toU128(scaled);
 
-        if (_isCollateral(asset, msg.sender)) {
-            uint256 hf = healthFactor(msg.sender);
-            if (hf < WAD) revert WouldBreakHealth(hf);
-        }
+        uint256 hf = healthFactor(msg.sender);
+        if (hf < WAD) revert WouldBreakHealth(hf);
 
         IERC20(asset).safeTransfer(msg.sender, amount);
         emit Withdrawn(asset, msg.sender, amount);
