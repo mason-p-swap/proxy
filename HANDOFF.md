@@ -123,7 +123,18 @@ All scripts broadcast with an encrypted keystore:
 
 ## Tests
 `cd contracts && forge test` — full suite (AMM unit + invariants, money-market unit +
-invariants, ETH-path tests). All green.
+invariants, ETH-path tests). 94/94 green.
+
+## Security review
+Two internal multi-agent audit passes were run (each finding adversarially verified before
+being accepted); **no critical or high-severity issues** were confirmed. Confirmed medium
+issues were fixed and regression-tested. Details and the remaining accepted/deferred items:
+- `AUDIT_REPORT.md` — first pass + remediation status.
+- `AUDIT_REPORT_PASS2.md` — deeper pass; fix-correctness verdicts and residual findings.
+
+These are internal reviews, not a substitute for a professional third-party audit before
+mainnet. The most relevant carry-over item for the zXMR work: replacing the fixed zXMR oracle
+price with a real feed also closes the oracle-robustness items noted in the reports.
 
 ## Known testnet limitations
 - Tokens are valueless mocks; faucets are enabled and must be removed for production.
