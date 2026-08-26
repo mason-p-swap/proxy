@@ -10,6 +10,7 @@ import {
   type BridgeOrder,
   type BridgeStatus,
 } from "@/lib/bridge"
+import { CryptoIcon } from "@/components/crypto-icon"
 import { fmtAmount } from "@/lib/format"
 import { Loader2, ArrowRight, Copy, Check, CircleCheck, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -107,15 +108,12 @@ export function XmrBridgeFlow({ from, to, fromAmount, account }: Props) {
 function OrderCard({ order, onReset }: { order: BridgeOrder; onReset: () => void }) {
   const done = order.status === "completed"
   const activeIdx = STEPS.indexOf(order.status)
+  const fromAmt = fmtAmount(Number(order.fromAmount))
+  const toAmt = fmtAmount(Number(order.toAmount))
 
   return (
-    <div className="mt-3 space-y-3">
-      <div className="flex items-center justify-between rounded-lg border border-border bg-background/40 px-3 py-2">
-        <span className="text-[11px] text-muted-foreground">Order</span>
-        <span className="font-mono text-xs font-bold text-foreground">{order.id}</span>
-      </div>
-
-      <div className="rounded-lg border border-border bg-background/40 p-3">
+    <div className="mt-3 overflow-hidden rounded-xl border border-border bg-background/40">
+      <div className="flex items-center justify-between gap-2 border-b border-border/60 px-4 py-3">
         <div className="flex items-center gap-2">
           {done ? (
             <CircleCheck className="size-4 text-success" />
@@ -124,48 +122,66 @@ function OrderCard({ order, onReset }: { order: BridgeOrder; onReset: () => void
           )}
           <span className="text-sm font-bold text-foreground">{BRIDGE_STATUS_LABEL[order.status]}</span>
         </div>
-        <div className="mt-3 flex items-center gap-1">
-          {STEPS.map((s, i) => (
-            <div
-              key={s}
-              className={cn(
-                "h-1 flex-1 rounded-full transition-colors",
-                i <= activeIdx ? "bg-success" : "bg-white/10"
-              )}
-            />
-          ))}
+        <span className="font-mono text-[10px] tracking-wide text-muted-foreground">{order.id}</span>
+      </div>
+
+      <div className="flex items-center gap-1 px-4 pt-3">
+        {STEPS.map((s, i) => (
+          <div
+            key={s}
+            className={cn(
+              "h-1 flex-1 rounded-full transition-colors",
+              i < activeIdx ? "bg-success" : i === activeIdx ? (done ? "bg-success" : "bg-success/50") : "bg-white/10"
+            )}
+          />
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between gap-3 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <CryptoIcon symbol={order.fromSymbol} size={20} />
+          <div className="flex flex-col">
+            <span className="text-sm font-bold tabular-nums text-foreground">{fromAmt}</span>
+            <span className="text-[10px] text-muted-foreground">{order.fromSymbol}</span>
+          </div>
+        </div>
+        <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+        <div className="flex items-center gap-2">
+          <div className="flex flex-col items-end">
+            <span className="text-sm font-bold tabular-nums text-foreground">{toAmt}</span>
+            <span className="text-[10px] text-muted-foreground">{order.toSymbol}</span>
+          </div>
+          <CryptoIcon symbol={order.toSymbol} size={20} />
         </div>
       </div>
 
       {!done && (
-        <div className="space-y-2 rounded-lg border border-border bg-background/40 p-3">
+        <div className="border-t border-border/60 bg-card/40 px-4 py-3">
           <div className="text-[11px] text-muted-foreground">
-            Send exactly <span className="font-bold text-foreground">{order.fromAmount} {order.depositAsset}</span> to:
+            Send exactly <span className="font-bold text-foreground">{fromAmt} {order.depositAsset}</span> to
           </div>
-          <CopyRow value={order.depositAddress} />
+          <div className="mt-1.5">
+            <CopyRow value={order.depositAddress} />
+          </div>
         </div>
       )}
 
-      <div className="rounded-lg border border-border bg-background/40 p-3 text-[11px] text-muted-foreground">
-        You receive <span className="font-bold text-foreground">{fmtAmount(Number(order.toAmount))} {order.toSymbol}</span>
-        {" "}at
+      <div className="border-t border-border/60 px-4 py-3 text-[11px] text-muted-foreground">
+        <div className="flex items-center justify-between">
+          <span>{done ? "Sent to" : "Payout to"}</span>
+          <span className="opacity-70">Fee {BRIDGE_FEE_PCT}%</span>
+        </div>
         <div className="mt-1 break-all font-mono text-[10px] text-foreground/80">{order.payoutAddress}</div>
-        <div className="mt-1 opacity-70">Bridge fee {BRIDGE_FEE_PCT}%</div>
       </div>
 
-      {done && (
-        <div className="flex items-center gap-2 rounded-lg border border-success/40 bg-success/5 p-3 text-[11px] text-muted-foreground">
-          <CircleCheck className="size-3.5 shrink-0 text-success" />
-          Monero sent to your address. This order is complete.
-        </div>
-      )}
-
-      <button
-        onClick={onReset}
-        className="flex w-full items-center justify-center gap-2 rounded-lg border border-border py-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
-      >
-        New swap
-      </button>
+      <div className="border-t border-border/60 p-3">
+        <button
+          onClick={onReset}
+          className="flex w-full items-center justify-center gap-2 rounded-lg py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
+        >
+          New swap
+        </button>
+      </div>
     </div>
   )
 }
