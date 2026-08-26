@@ -4,7 +4,6 @@ import { BlocksBackground } from "@/components/blocks-background"
 import { SiteFooter } from "@/components/site-footer"
 import { HomePage } from "@/pages/home"
 import { MarketsPage } from "@/pages/markets"
-import { DefiPage } from "@/pages/defi"
 import { DashboardPage } from "@/pages/dashboard"
 import { SupplyPage } from "@/pages/supply"
 import { BorrowPage } from "@/pages/borrow"
@@ -24,8 +23,7 @@ function AppContent() {
       <main>
         {route.name === "home" && <HomePage navigate={navigate} />}
         {route.name === "markets" && <MarketsPage navigate={navigate} />}
-        {route.name === "defi" && <DefiPage navigate={navigate} />}
-        {route.name === "dashboard" && <DashboardPage navigate={navigate} />}
+        {route.name === "defi" && <DashboardPage navigate={navigate} />}
         {route.name === "supply" && <SupplyPage navigate={navigate} />}
         {route.name === "borrow" && <BorrowPage navigate={navigate} />}
         {route.name === "docs" && <DocsPage navigate={navigate} />}

@@ -2,14 +2,14 @@ import { useMemo, useState } from "react"
 import { formatUnits } from "viem"
 import { MARKET_ASSETS } from "@/lib/web3"
 import { useMoneyMarket, pct, usdOf, hfDisplayOf, hfColorOf } from "@/hooks/use-money-market"
-import { shortAddress } from "@/hooks/use-wallet"
-import { DashShell, WalletBanner } from "@/components/dash-shell"
+import { shortAddress, connectWallet } from "@/hooks/use-wallet"
+import { DashShell } from "@/components/dash-shell"
 import { MarketActionModal, type ModalTarget } from "@/components/market-action-modal"
 import { CryptoIcon } from "@/components/crypto-icon"
 import { Switch } from "@/components/ui/switch"
 import { fmtAmount, fmtUsd, fmtPct } from "@/lib/format"
 import type { Route } from "@/lib/types"
-import { ArrowDownToLine, ArrowUpFromLine, Skull, Loader2, Droplets } from "lucide-react"
+import { ArrowDownToLine, ArrowUpFromLine, Skull, Loader2, Droplets, Wallet } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 type Props = { navigate: (to: Route) => void }
@@ -59,25 +59,57 @@ export function DashboardPage({ navigate }: Props) {
             {mm.account ? shortAddress(mm.account) : "your position at a glance"} · sepolia
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate({ name: "supply" })}
-            className="flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-xs font-bold text-background transition-all hover:bg-foreground/90 active:scale-[0.98]"
-          >
-            <ArrowDownToLine className="size-3.5" />
-            Supply
-          </button>
-          <button
-            onClick={() => navigate({ name: "borrow" })}
-            className="flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-xs font-bold text-foreground transition-colors hover:border-foreground/30"
-          >
-            <ArrowUpFromLine className="size-3.5" />
-            Borrow
-          </button>
-        </div>
+        {mm.connected && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate({ name: "supply" })}
+              className="flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-xs font-bold text-background transition-all hover:bg-foreground/90 active:scale-[0.98]"
+            >
+              <ArrowDownToLine className="size-3.5" />
+              Supply
+            </button>
+            <button
+              onClick={() => navigate({ name: "borrow" })}
+              className="flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-xs font-bold text-foreground transition-colors hover:border-foreground/30"
+            >
+              <ArrowUpFromLine className="size-3.5" />
+              Borrow
+            </button>
+          </div>
+        )}
       </div>
 
-      <WalletBanner mm={mm} />
+      {!mm.connected && (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-border/60 bg-card/40 px-6 py-20 text-center">
+          <div className="mb-4 flex size-14 items-center justify-center rounded-2xl border border-border/60 bg-background/50">
+            <Wallet className="size-6 text-muted-foreground" />
+          </div>
+          <h2 className="text-lg font-bold text-foreground">Connect your wallet</h2>
+          <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-muted-foreground">
+            Connect to view your positions, supply assets to earn yield, and borrow against your
+            collateral. Markets are live on Sepolia — nothing to sign up for.
+          </p>
+          {mm.hasProvider ? (
+            <button
+              onClick={connectWallet}
+              disabled={mm.connecting}
+              className="mt-6 flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-sm font-bold text-background transition-all hover:bg-foreground/90 active:scale-[0.98] disabled:opacity-60"
+            >
+              {mm.connecting ? <Loader2 className="size-4 animate-spin" /> : <Wallet className="size-4" />}
+              {mm.connecting ? "check MetaMask…" : "Connect Wallet"}
+            </button>
+          ) : (
+            <a
+              href="https://metamask.io/download/"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-6 flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-sm font-bold text-background transition-all hover:bg-foreground/90"
+            >
+              <Wallet className="size-4" /> Install MetaMask
+            </a>
+          )}
+        </div>
+      )}
 
       {mm.connected && (
         <>

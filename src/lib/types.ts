@@ -12,7 +12,6 @@ export type Route =
   | { name: "home" }
   | { name: "markets" }
   | { name: "defi" }
-  | { name: "dashboard" }
   | { name: "supply" }
   | { name: "borrow" }
   | { name: "docs" }

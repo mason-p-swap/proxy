@@ -8,7 +8,7 @@ export function parseHash(hash: string): Route {
   if (parts.length === 0) return { name: "home" }
   if (parts[0] === "markets") return { name: "markets" }
   if (parts[0] === "defi") return { name: "defi" }
-  if (parts[0] === "dashboard") return { name: "dashboard" }
+  if (parts[0] === "dashboard") return { name: "defi" }
   if (parts[0] === "supply") return { name: "supply" }
 
   if (parts[0] === "deposit") return { name: "supply" }
@@ -25,7 +25,6 @@ export function routeToHash(route: Route): string {
     case "home": return "#/"
     case "markets": return "#/markets"
     case "defi": return "#/defi"
-    case "dashboard": return "#/dashboard"
     case "supply": return "#/supply"
     case "borrow": return "#/borrow"
     case "docs": return "#/docs"

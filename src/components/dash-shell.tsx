@@ -5,7 +5,7 @@ import { connectWallet, switchToSepolia } from "@/hooks/use-wallet"
 import type { MoneyMarket } from "@/hooks/use-money-market"
 import type { Route } from "@/lib/types"
 import {
-  ExternalLink, LayoutDashboard, Landmark, ArrowDownToLine, ArrowUpFromLine,
+  ExternalLink, LayoutDashboard, ArrowDownToLine, ArrowUpFromLine,
   Gauge, CircleHelp, Clock, Globe, FileCode2, Mail, Wallet, AlertTriangle, Loader2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -40,10 +40,9 @@ export function DashShell({ active, navigate, children }: Props) {
               icon={LayoutDashboard}
               label="Dashboard"
               active={active === "dashboard"}
-              onClick={() => navigate({ name: "dashboard" })}
+              onClick={() => navigate({ name: "defi" })}
             />
             <SideItem icon={Clock} label="Activity" href={`${EXPLORER}/address/${ADDR_V2.market}?tab=txs`} />
-            <SideItem icon={Landmark} label="Markets" onClick={() => navigate({ name: "defi" })} />
           </nav>
 
           <SideHeading>explore</SideHeading>
