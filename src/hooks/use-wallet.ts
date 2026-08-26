@@ -20,6 +20,8 @@ let state: WalletState = {
   connecting: false,
 }
 
+const DISCONNECT_KEY = "proxyswap.wallet.disconnected"
+
 const listeners = new Set<() => void>()
 
 function setState(patch: Partial<WalletState>) {
@@ -41,7 +43,11 @@ function wireProviderEvents() {
   if (wired || !window.ethereum?.on) return
   wired = true
   window.ethereum.on("accountsChanged", (accounts: string[]) => {
-    setState({ account: (accounts[0] as Address) ?? null })
+    const next = (accounts[0] as Address) ?? null
+    if (next) {
+      try { localStorage.removeItem(DISCONNECT_KEY) } catch { /* storage unavailable */ }
+    }
+    setState({ account: next })
   })
   window.ethereum.on("chainChanged", (hexId: string) => {
     setState({ chainId: parseInt(hexId, 16) })
@@ -51,6 +57,9 @@ function wireProviderEvents() {
 async function restore() {
   if (!window.ethereum) return
   wireProviderEvents()
+  try {
+    if (localStorage.getItem(DISCONNECT_KEY) === "1") return
+  } catch { /* storage unavailable */ }
   try {
     const [accounts, hexId] = await Promise.all([
       window.ethereum.request({ method: "eth_accounts" }),
@@ -70,6 +79,7 @@ let restored = false
 export async function connectWallet(): Promise<void> {
   if (!window.ethereum) return
   wireProviderEvents()
+  try { localStorage.removeItem(DISCONNECT_KEY) } catch { /* storage unavailable */ }
   setState({ connecting: true })
   try {
     const accounts: string[] = await window.ethereum.request({ method: "eth_requestAccounts" })
@@ -105,6 +115,17 @@ export async function switchToSepolia(): Promise<void> {
       })
     }
   }
+}
+
+export async function disconnectWallet(): Promise<void> {
+  try { localStorage.setItem(DISCONNECT_KEY, "1") } catch { /* storage unavailable */ }
+  try {
+    await window.ethereum?.request({
+      method: "wallet_revokePermissions",
+      params: [{ eth_accounts: {} }],
+    })
+  } catch { /* not supported — local disconnect still applies */ }
+  setState({ account: null })
 }
 
 export function useWallet() {

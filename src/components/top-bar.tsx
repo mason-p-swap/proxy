@@ -1,8 +1,10 @@
+import { useState } from "react"
 import { Logo } from "@/components/logo"
 import type { Route } from "@/lib/types"
 import { SITE_NAME } from "@/lib/site"
-import { useWallet, connectWallet, switchToSepolia, shortAddress } from "@/hooks/use-wallet"
-import { Wallet, Loader2, AlertTriangle } from "lucide-react"
+import { EXPLORER } from "@/lib/web3"
+import { useWallet, connectWallet, switchToSepolia, disconnectWallet, shortAddress } from "@/hooks/use-wallet"
+import { Wallet, Loader2, AlertTriangle, ChevronDown, Copy, Check, ExternalLink, LogOut } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 type Props = {
@@ -48,10 +50,70 @@ function WalletButton() {
     )
   }
 
+  return <WalletMenu account={account} />
+}
+
+function WalletMenu({ account }: { account: string }) {
+  const [open, setOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(account)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch { /* clipboard blocked */ }
+  }
+
   return (
-    <div className="flex items-center gap-1.5 rounded-md border border-border bg-card/60 px-3 py-1.5 text-xs">
-      <span className="size-1.5 rounded-full bg-success" />
-      <span className="font-mono font-semibold text-foreground">{shortAddress(account)}</span>
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1.5 rounded-md border border-border bg-card/60 px-3 py-1.5 text-xs transition-colors hover:border-foreground/30"
+      >
+        <span className="size-1.5 rounded-full bg-success" />
+        <span className="font-mono font-semibold text-foreground">{shortAddress(account)}</span>
+        <ChevronDown className={cn("size-3.5 text-muted-foreground transition-transform", open && "rotate-180")} />
+      </button>
+
+      {open && (
+        <>
+          <button className="fixed inset-0 z-40 cursor-default" aria-hidden onClick={() => setOpen(false)} />
+          <div
+            className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-lg border border-border bg-popover shadow-xl"
+            style={{ animation: "fade-in-up 0.12s ease-out" }}
+          >
+            <div className="border-b border-border px-3 py-2.5">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Connected</div>
+              <div className="mt-0.5 break-all font-mono text-[11px] text-foreground">{account}</div>
+            </div>
+            <button
+              onClick={copy}
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs text-foreground transition-colors hover:bg-accent"
+            >
+              {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5 text-muted-foreground" />}
+              {copied ? "Copied" : "Copy address"}
+            </button>
+            <a
+              href={`${EXPLORER}/address/${account}`}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => setOpen(false)}
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs text-foreground transition-colors hover:bg-accent"
+            >
+              <ExternalLink className="size-3.5 text-muted-foreground" />
+              View on explorer
+            </a>
+            <button
+              onClick={() => { disconnectWallet(); setOpen(false) }}
+              className="flex w-full items-center gap-2 border-t border-border px-3 py-2.5 text-left text-xs font-semibold text-destructive transition-colors hover:bg-destructive/10"
+            >
+              <LogOut className="size-3.5" />
+              Disconnect
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }
