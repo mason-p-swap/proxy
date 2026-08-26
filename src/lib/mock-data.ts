@@ -12,18 +12,3 @@ export const COINS: Coin[] = [
 
 export const COIN_MAP = Object.fromEntries(COINS.map((c) => [c.symbol, c]))
 
-export const STATS = {
-  totalExchanges: 1_284_951,
-  totalVolume: "$4.2B",
-  avgTime: "~4 min",
-  currencies: COINS.length,
-}
-
-export const RECENT_EXCHANGES = [
-  { from: "ETH", to: "zXMR", amount: "2.5 ETH", time: 12 },
-  { from: "USDC", to: "zXMR", amount: "1,200 USDC", time: 38 },
-  { from: "zXMR", to: "USDT", amount: "18 zXMR", time: 61 },
-  { from: "WETH", to: "USDC", amount: "0.8 WETH", time: 90 },
-  { from: "DAI", to: "zXMR", amount: "4,800 DAI", time: 115 },
-  { from: "USDT", to: "DAI", amount: "3,200 USDT", time: 143 },
-]

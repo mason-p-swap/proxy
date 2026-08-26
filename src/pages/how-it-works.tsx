@@ -1,39 +1,38 @@
-import { ArrowRight, Wallet, Send, Loader, CheckCircle2 } from "lucide-react"
+import { ArrowRight, Wallet, Coins, Loader, CheckCircle2 } from "lucide-react"
 import type { Route } from "@/lib/types"
-import { STATS } from "@/lib/mock-data"
 
 const STEPS = [
   {
     n: 1,
     icon: Wallet,
-    title: "Choose your pair",
-    desc: "Select the coin you want to send and the coin you want to receive. We support 20 assets across 8 networks.",
+    title: "Connect your wallet",
+    desc: "Connect MetaMask. No account, no sign-up, no email — and you keep custody of your coins the entire time.",
   },
   {
     n: 2,
-    icon: Send,
-    title: "Send your deposit",
-    desc: "We generate a unique deposit address. Send the exact amount and your funds are tracked on-chain in real time.",
+    icon: Coins,
+    title: "Pick your pair and amount",
+    desc: "Choose what you're swapping and how much. You'll see a live quote with the price and the 0.3% fee before you commit to anything.",
   },
   {
     n: 3,
     icon: Loader,
-    title: "We handle the swap",
-    desc: "Your deposit is confirmed, exchanged at the locked rate, and routed to your destination address. No account needed.",
+    title: "Confirm the swap",
+    desc: "Approve the transaction in your wallet. The router sends it through our own zXMR pools or Uniswap — whichever gives the better price.",
   },
   {
     n: 4,
     icon: CheckCircle2,
-    title: "Receive your coins",
-    desc: "Funds arrive in your wallet. Average completion time is under 4 minutes. Track everything with your order ID.",
+    title: "Receive on-chain",
+    desc: "The swap settles in a single transaction, usually in seconds. Tokens land straight in your wallet; nothing is ever held for you.",
   },
 ]
 
 const FEATURES = [
   { title: "No account", desc: "Swap instantly. No sign-up, no KYC, no email." },
-  { title: "Non-custodial", desc: "We never hold your funds longer than the swap requires." },
-  { title: "Locked rates", desc: "Choose a fixed rate to protect against volatility." },
-  { title: "On-chain tracking", desc: "Every step is verifiable on the blockchain." },
+  { title: "Non-custodial", desc: "Coins go from your wallet, through the pool, and back. We never hold them." },
+  { title: "Smart routing", desc: "Each swap routes through our zXMR pools or Uniswap for the best price, automatically." },
+  { title: "On-chain & verifiable", desc: "Every swap is a single transaction you can verify on the block explorer." },
 ]
 
 type Props = { navigate: (to: Route) => void }
@@ -49,7 +48,7 @@ export function HowItWorksPage({ navigate }: Props) {
         <div className="mb-12 text-center">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">How it works</h1>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-            Four steps. No account. From wallet to wallet in minutes.
+            Four steps. No account. Wallet to wallet in one on-chain transaction.
           </p>
         </div>
 
@@ -86,10 +85,10 @@ export function HowItWorksPage({ navigate }: Props) {
 
         <div className="mb-12 grid grid-cols-2 gap-3 md:grid-cols-4">
           {[
-            { label: "Exchanges", value: STATS.totalExchanges.toLocaleString() },
-            { label: "Volume", value: STATS.totalVolume },
-            { label: "Avg time", value: STATS.avgTime },
-            { label: "Coins", value: String(STATS.currencies) },
+            { label: "Swap fee", value: "0.3%" },
+            { label: "Settles in", value: "1 tx" },
+            { label: "Custody", value: "Yours" },
+            { label: "Network", value: "Sepolia" },
           ].map((s) => (
             <div
               key={s.label}
@@ -120,13 +119,13 @@ export function HowItWorksPage({ navigate }: Props) {
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-border/60 bg-card/40 p-8 text-center">
           <h2 className="text-lg font-bold text-foreground">Ready to swap?</h2>
           <p className="max-w-sm text-xs text-muted-foreground">
-            Start your first exchange now. No account required.
+            Connect your wallet and swap. No account required.
           </p>
           <button
             onClick={() => navigate({ name: "home" })}
             className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground transition-opacity hover:opacity-90"
           >
-            Start exchanging
+            Start swapping
             <ArrowRight className="size-4" />
           </button>
         </div>

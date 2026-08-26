@@ -13,15 +13,15 @@ const FAQ_SECTIONS = [
     items: [
       {
         q: "Do I need to create an account?",
-        a: "No. Every exchange is fully anonymous. You don't need to register, verify your identity, or provide an email. Just pick your coins, enter your destination address, and send.",
+        a: "No. Connect your wallet and swap. There's no sign-up, no email, and no KYC — you interact directly with the smart contracts from your own wallet.",
       },
       {
-        q: "How long does an exchange take?",
-        a: "Most swaps complete in under 4 minutes. The exact time depends on the networks involved and their block confirmation times. Bitcoin deposits typically take longer than Solana or Ethereum.",
+        q: "How long does a swap take?",
+        a: "A swap is a single on-chain transaction — usually a few seconds once it confirms. There's no deposit to send, no third party to wait on, and no order to track.",
       },
       {
-        q: "Which coins are supported?",
-        a: "We support 20 cryptocurrencies across 8 networks including Bitcoin, Ethereum, Solana, BNB Chain, Tron, Polygon, Avalanche, and more. Check the Markets page for the full list.",
+        q: "Which tokens are supported?",
+        a: "zXMR, ETH, WETH, USDC, USDT, and DAI. Native Monero (XMR) is coming once the bridge ships. See the Markets page for the full list.",
       },
     ],
   },
@@ -29,33 +29,33 @@ const FAQ_SECTIONS = [
     category: "Rates & fees",
     items: [
       {
-        q: "What's the difference between float and fixed rates?",
-        a: "A float rate updates with the market until your deposit is confirmed. A fixed rate is locked for 30 minutes, protecting you from volatility. Fixed rates include a small fee (0.5%) for the guarantee.",
+        q: "How is the price set?",
+        a: "Prices come from live on-chain liquidity — either our own zXMR pools or Uniswap, whichever the router finds cheaper for your pair. You see the exact quote before you confirm.",
       },
       {
-        q: "How are fees calculated?",
-        a: "Our fee is already included in the displayed rate. There are no hidden charges. The amount you see is what you receive, minus the standard network fee for your destination address.",
+        q: "What are the fees?",
+        a: "A flat 0.3% fee per hop, already baked into the quote — the same model major DEXes use. You also pay the network's gas fee to submit the transaction.",
       },
       {
-        q: "Is there a minimum or maximum amount?",
-        a: "Yes, each coin has its own limits based on network fees and liquidity. Minimums start as low as $5. You'll see the limits for your chosen pair on the exchange panel.",
+        q: "Is there slippage?",
+        a: "Yes — like any AMM, the price moves as pools trade. Every swap includes a minimum-output guard, so it reverts rather than filling at a worse price than you accepted.",
       },
     ],
   },
   {
-    category: "Security & tracking",
+    category: "Security & custody",
     items: [
       {
-        q: "Do you store my funds?",
-        a: "No. We are non-custodial. Your deposit goes directly to a unique per-swap address, is exchanged immediately upon confirmation, and routed to your wallet. We never hold balances.",
+        q: "Do you hold my funds?",
+        a: "Never. Swaps are non-custodial and atomic: your coins move from your wallet, through the pool, and back in one transaction. There's no deposit address and nothing we could hold.",
       },
       {
-        q: "How do I track my exchange?",
-        a: "After creating an exchange you receive a unique order ID. Use the 'Find order' button in the top bar to check the status at any time. You can also bookmark the exchange page directly.",
+        q: "Can I see my past swaps?",
+        a: "Yes — every swap is a normal blockchain transaction. The confirmation links straight to the block explorer, where the swap is permanently recorded.",
       },
       {
-        q: "What if I send the wrong amount or coin?",
-        a: "Send the exact amount shown on your exchange page. If you send less, the swap may not complete. If you send the wrong coin to a deposit address, contact support immediately with your order ID — recovery may be possible but is not guaranteed.",
+        q: "What happens if a swap fails?",
+        a: "It simply reverts and you keep your coins (you only lose the gas for the failed transaction). Because swaps are atomic, there's no half-completed state — either it fills or nothing happens.",
       },
     ],
   },

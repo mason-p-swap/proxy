@@ -1,6 +1,6 @@
 import type { ReactNode, CSSProperties } from "react"
 import { CryptoIcon } from "@/components/crypto-icon"
-import { Wallet, ArrowRightLeft, Lock, Route, Search } from "lucide-react"
+import { Wallet, ArrowRightLeft, Lock, Route } from "lucide-react"
 
 const LINE_STROKE = "oklch(1 0 0 / 0.16)"
 
@@ -96,8 +96,8 @@ export function DepositIllo() {
         <Wallet className="size-4" />
       </Node>
       <Chip className="absolute bottom-3 left-1/2 -translate-x-1/2">
-        <span className="size-1.5 animate-pulse rounded-full bg-warning" />
-        awaiting deposit
+        <span className="size-1.5 animate-pulse rounded-full bg-success" />
+        connect wallet
       </Chip>
     </div>
   )
@@ -121,7 +121,7 @@ export function ConfirmIllo() {
       </Node>
       <Chip className="absolute bottom-3 left-1/2 -translate-x-1/2">
         <span className="size-1.5 animate-pulse rounded-full bg-warning" />
-        confirmations · 4/6
+        confirming swap
       </Chip>
     </div>
   )
@@ -143,7 +143,7 @@ export function PayoutIllo() {
       </Node>
       <Chip className="absolute bottom-3 left-1/2 -translate-x-1/2">
         <span className="size-1.5 rounded-full bg-success" />
-        order complete
+        tokens received
       </Chip>
     </div>
   )
@@ -215,24 +215,18 @@ export function ChainIllo() {
   )
 }
 
-export function TrackingIllo() {
+export function FeeIllo() {
   return (
-    <div className="dot-grid relative flex h-40 flex-col items-center justify-center gap-4 px-6" aria-hidden>
-      <Chip className="px-3 py-1.5 text-[11px] text-foreground">
-        <Search className="size-3 text-muted-foreground" />
-        order 7F2K-9QLX
-      </Chip>
-      <div className="flex w-full max-w-[190px] items-center">
-        <span className="size-2 shrink-0 rounded-full bg-success" />
-        <span className="h-px flex-1 bg-success/50" />
-        <span className="size-2 shrink-0 rounded-full bg-success" />
-        <span className="h-px flex-1 border-t border-dashed border-border" />
-        <span className="size-2 shrink-0 animate-pulse rounded-full border border-foreground/60 bg-background" />
+    <div className="dot-grid relative flex h-40 flex-col items-center justify-center gap-3 px-6" aria-hidden>
+      <div className="flex items-baseline gap-1 text-foreground">
+        <span className="font-brand text-4xl font-bold tracking-tight">0.3</span>
+        <span className="text-lg font-bold">%</span>
       </div>
-      <div className="flex w-full max-w-[210px] justify-between text-[9px] uppercase tracking-wider text-muted-foreground">
-        <span>deposit</span>
-        <span>exchange</span>
-        <span>payout</span>
+      <span className="text-[9px] uppercase tracking-wider text-muted-foreground">fee per hop</span>
+      <div className="flex w-full max-w-[200px] items-center gap-2">
+        <Chip className="flex-1 justify-center px-2 py-1 text-[10px] text-foreground">you pay</Chip>
+        <ArrowRightLeft className="size-3 shrink-0 text-muted-foreground" />
+        <Chip className="flex-1 justify-center px-2 py-1 text-[10px] text-foreground">you get</Chip>
       </div>
     </div>
   )

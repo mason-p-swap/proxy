@@ -10,7 +10,7 @@ import {
   RateLockIllo,
   CustodyIllo,
   ChainIllo,
-  TrackingIllo,
+  FeeIllo,
 } from "@/components/home-illustrations"
 import type { Route } from "@/lib/types"
 import { ArrowRight } from "lucide-react"
@@ -213,7 +213,7 @@ export function HomePage({ navigate }: Props) {
               {
                 title: "Low fees",
                 desc: "A flat 0.3% fee per hop — the same model the biggest DEXes run on.",
-                Illo: TrackingIllo,
+                Illo: FeeIllo,
               },
             ].map((f) => (
               <div
