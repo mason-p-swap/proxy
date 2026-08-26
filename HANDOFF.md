@@ -95,15 +95,27 @@ The oracle currently uses a fixed price (`setFixedPrice(zXMR, $282.95)`). Replac
 a Chainlink XMR/USD aggregator (`setAggregator`) on the target chain, or a TWAP oracle read
 from the zXMR pools. This one call is what makes zXMR collateral safe against manipulation.
 
-### 3. Monero bridge unwrap SDK  ← the missing cross-chain leg
-XMR pairs (`ETH↔XMR`, `USDC↔XMR`, etc.) route as `ASSET → zXMR → XMR`. The
-`ASSET → zXMR` leg is fully live on-chain. The final `zXMR → XMR` unwrap needs the ZeroFi
-bridge SDK, which does not exist yet. Integration points once it does:
-- `src/lib/route-engine.ts` — XMR pairs currently return no route (`comingSoon`). Add the
-  bridge call as the terminal hop after the on-chain `ASSET → zXMR` swap.
-- `src/components/swap-widget.tsx` — add a Monero destination-address field for XMR-out swaps.
-- Backend/relayer — after the on-chain swap into zXMR, the bridge burns/locks zXMR and
-  releases native XMR to the user's Monero address.
+### 3. Centralized Monero bridge  ← the cross-chain leg
+XMR swaps (`ETH↔XMR`, `USDC↔XMR`, etc.) are `ASSET → zXMR → native XMR`. The on-chain
+`ASSET → zXMR` leg is decentralized and live. The final `zXMR → XMR` hop **must be a
+centralized custodial bridge** (ChangeNOW-style) — Monero has no smart contracts, so it can't
+be atomic. The operator holds an **XMR reserve pool** and zXMR mint/burn authority, watches
+for deposits, and releases native XMR to the user's Monero address.
+
+**The frontend for this is already built** and runs against a mock bridge, so the whole flow
+(Monero-address entry → deposit instructions → order-status tracker → completed) is demoable
+today. To make it live, replace **one file** — `src/lib/bridge.ts`:
+- `quoteBridge(fromSymbol, toSymbol, amountIn)` → your rate endpoint.
+- `createBridgeOrder({ fromSymbol, toSymbol, fromAmount, payoutAddress })` → your create-order
+  endpoint; return the real deposit address + order id.
+- `getBridgeOrder(id)` → your order-status endpoint (drives the status tracker).
+- Set `BRIDGE_IS_LIVE = true` (removes the "demo bridge" notice).
+
+The UI (`src/components/xmr-bridge-flow.tsx`) and the widget wiring (XMR is flagged `isBridge`
+in `SWAP_TOKENS`) need no changes. Everything else — the operator's Monero node/wallet, the
+XMR reserve pool, deposit-watching, payout, and the **order database** — is the backend you run
+behind those three calls. (This is the one place the app needs a server + DB; the on-chain
+side does not.)
 
 ---
 

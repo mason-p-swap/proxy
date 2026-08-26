@@ -83,6 +83,7 @@ export type SwapToken = {
   hasFaucet?: boolean
   comingSoon?: boolean
   isNative?: boolean
+  isBridge?: boolean
 }
 
 export const SWAP_TOKENS: SwapToken[] = [
@@ -92,7 +93,7 @@ export const SWAP_TOKENS: SwapToken[] = [
   { symbol: "USDC", name: "USD Coin", icon: "USDC", decimals: 6, address: ADDR_V2.usdc, hasFaucet: true },
   { symbol: "USDT", name: "Tether USD", icon: "USDT", decimals: 6, address: ADDR_V2.usdt, hasFaucet: true },
   { symbol: "DAI", name: "Dai Stablecoin", icon: "DAI", decimals: 18, address: ADDR_V2.dai, hasFaucet: true },
-  { symbol: "XMR", name: "Monero", icon: "XMR", decimals: 12, comingSoon: true },
+  { symbol: "XMR", name: "Monero", icon: "XMR", decimals: 12, isBridge: true },
 ]
 
 export const ROUTER_ABI = parseAbi([

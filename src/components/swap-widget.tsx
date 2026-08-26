@@ -11,6 +11,8 @@ import {
   type SwapToken,
 } from "@/lib/web3"
 import { quoteBestRoute, venueLabel, type RoutePlan } from "@/lib/route-engine"
+import { quoteBridge, BRIDGE_FEE_PCT } from "@/lib/bridge"
+import { XmrBridgeFlow } from "@/components/xmr-bridge-flow"
 import { useWallet, connectWallet, switchToSepolia } from "@/hooks/use-wallet"
 import { CryptoIcon } from "@/components/crypto-icon"
 import { fmtAmount } from "@/lib/format"
@@ -36,8 +38,9 @@ export function SwapWidget() {
 
   const from = SWAP_TOKENS.find((t) => t.symbol === fromSym)!
   const to = SWAP_TOKENS.find((t) => t.symbol === toSym)!
-  const xmrInvolved = Boolean(from.comingSoon || to.comingSoon)
+  const bridgeInvolved = Boolean(from.isBridge || to.isBridge)
   const amt = parseFloat(amountIn) || 0
+  const bridgeQuote = bridgeInvolved && amt > 0 ? quoteBridge(from.symbol, to.symbol, amt) : null
 
   const connected = hasProvider && Boolean(account) && onSepolia
 
@@ -58,7 +61,7 @@ export function SwapWidget() {
 
   useEffect(() => {
     setQuoteErr(null)
-    if (xmrInvolved || amt <= 0) {
+    if (bridgeInvolved || amt <= 0) {
       setQuoteOut(null)
       setPlan(null)
       setQuoting(false)
@@ -85,7 +88,7 @@ export function SwapWidget() {
       }
     }, 400)
     return () => clearTimeout(t)
-  }, [amountIn, from, to, xmrInvolved, refreshKey])
+  }, [amountIn, from, to, bridgeInvolved, refreshKey])
 
   const pick = (side: "from" | "to", sym: string) => {
     if (side === "from") {
@@ -202,7 +205,7 @@ export function SwapWidget() {
   }
 
   const canSwap =
-    connected && !xmrInvolved && !!quoteOut && !!plan && !quoting && !quoteErr && amt > 0 && !overBalance && busy === null
+    connected && !bridgeInvolved && !!quoteOut && !!plan && !quoting && !quoteErr && amt > 0 && !overBalance && busy === null
 
   return (
     <div className="relative w-full rounded-xl border border-border bg-card/60 p-5 backdrop-blur-md">
@@ -241,9 +244,11 @@ export function SwapWidget() {
         label="You receive"
         token={to}
         amount={
-          quoting ? "" : quoteOut != null ? fmtAmount(Number(formatUnits(quoteOut, to.decimals))) : ""
+          bridgeInvolved
+            ? bridgeQuote ? fmtAmount(bridgeQuote.toAmount) : ""
+            : quoting ? "" : quoteOut != null ? fmtAmount(Number(formatUnits(quoteOut, to.decimals))) : ""
         }
-        loading={quoting}
+        loading={!bridgeInvolved && quoting}
         onPick={() => setPicker(picker === "to" ? null : "to")}
         pickerOpen={picker === "to"}
         exclude={from}
@@ -252,7 +257,15 @@ export function SwapWidget() {
       />
 
       <div className="mt-2 min-h-4 px-1 text-[11px]">
-        {quoteErr ? (
+        {bridgeInvolved ? (
+          bridgeQuote ? (
+            <span className="text-muted-foreground">
+              1 {from.symbol} = {fmtAmount(bridgeQuote.rate)} {to.symbol}
+              <span className="ml-2 opacity-70">· via ZeroFi bridge</span>
+              <span className="ml-2 opacity-70">· {BRIDGE_FEE_PCT}% fee</span>
+            </span>
+          ) : null
+        ) : quoteErr ? (
           <span className="text-destructive">{quoteErr}</span>
         ) : rate ? (
           <span className="text-muted-foreground">
@@ -263,72 +276,73 @@ export function SwapWidget() {
         ) : null}
       </div>
 
-      {xmrInvolved && (
-        <div className="mt-3 flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/5 p-3 text-[11px] leading-relaxed text-muted-foreground">
-          <AlertTriangle className="mt-px size-3.5 shrink-0 text-warning" />
-          Native Monero (XMR) swaps route through the ZeroFi bridge, which is coming soon. Until then,
-          swap between the on-chain assets.
-        </div>
-      )}
-
-      {!hasProvider && (
-        <div className="mt-4 flex items-center gap-2 rounded-lg border border-border bg-background/40 p-3 text-[11px] text-muted-foreground">
-          <Wallet className="size-3.5" /> install MetaMask to swap on-chain.
-        </div>
-      )}
-
-      {hasProvider && !account && (
-        <button
-          onClick={connectWallet}
-          disabled={connecting}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-foreground py-3 text-sm font-bold uppercase tracking-wider text-background transition-all hover:bg-foreground/90 disabled:opacity-60"
-        >
-          {connecting ? <Loader2 className="size-4 animate-spin" /> : <Wallet className="size-4" />}
-          {connecting ? "check MetaMask…" : "Connect Wallet"}
-        </button>
-      )}
-
-      {hasProvider && account && !onSepolia && (
-        <button
-          onClick={switchToSepolia}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-warning py-3 text-sm font-bold uppercase tracking-wider text-warning-foreground"
-        >
-          <AlertTriangle className="size-4" /> Switch to Sepolia
-        </button>
-      )}
-
-      {connected && (
+      {bridgeInvolved ? (
+        <XmrBridgeFlow
+          from={from}
+          to={to}
+          fromAmount={amountIn}
+          account={account ?? undefined}
+        />
+      ) : (
         <>
-          <button
-            onClick={doSwap}
-            disabled={!canSwap}
-            className={cn(
-              "mt-4 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold uppercase tracking-wider transition-all",
-              canSwap
-                ? "bg-foreground text-background hover:bg-foreground/90 active:scale-[0.98]"
-                : "cursor-not-allowed bg-muted text-muted-foreground"
-            )}
-          >
-            {busy === "swap" && <Loader2 className="size-4 animate-spin" />}
-            {busy === "swap"
-              ? "check MetaMask…"
-              : xmrInvolved
-                ? "Monero bridge coming soon"
-                : overBalance
-                  ? `insufficient ${from.symbol}`
-                  : "Swap"}
-            {canSwap && <ArrowRight className="size-4" />}
-          </button>
+          {!hasProvider && (
+            <div className="mt-4 flex items-center gap-2 rounded-lg border border-border bg-background/40 p-3 text-[11px] text-muted-foreground">
+              <Wallet className="size-3.5" /> install MetaMask to swap on-chain.
+            </div>
+          )}
 
-          {from.hasFaucet && (
+          {hasProvider && !account && (
             <button
-              onClick={faucet}
-              disabled={busy !== null}
-              className="mt-2 flex w-full items-center justify-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+              onClick={connectWallet}
+              disabled={connecting}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-foreground py-3 text-sm font-bold uppercase tracking-wider text-background transition-all hover:bg-foreground/90 disabled:opacity-60"
             >
-              {busy === "faucet" ? <Loader2 className="size-3 animate-spin" /> : <Droplets className="size-3" />}
-              mint test {from.symbol}
+              {connecting ? <Loader2 className="size-4 animate-spin" /> : <Wallet className="size-4" />}
+              {connecting ? "check MetaMask…" : "Connect Wallet"}
             </button>
+          )}
+
+          {hasProvider && account && !onSepolia && (
+            <button
+              onClick={switchToSepolia}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-warning py-3 text-sm font-bold uppercase tracking-wider text-warning-foreground"
+            >
+              <AlertTriangle className="size-4" /> Switch to Sepolia
+            </button>
+          )}
+
+          {connected && (
+            <>
+              <button
+                onClick={doSwap}
+                disabled={!canSwap}
+                className={cn(
+                  "mt-4 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold uppercase tracking-wider transition-all",
+                  canSwap
+                    ? "bg-foreground text-background hover:bg-foreground/90 active:scale-[0.98]"
+                    : "cursor-not-allowed bg-muted text-muted-foreground"
+                )}
+              >
+                {busy === "swap" && <Loader2 className="size-4 animate-spin" />}
+                {busy === "swap"
+                  ? "check MetaMask…"
+                  : overBalance
+                    ? `insufficient ${from.symbol}`
+                    : "Swap"}
+                {canSwap && <ArrowRight className="size-4" />}
+              </button>
+
+              {from.hasFaucet && (
+                <button
+                  onClick={faucet}
+                  disabled={busy !== null}
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+                >
+                  {busy === "faucet" ? <Loader2 className="size-3 animate-spin" /> : <Droplets className="size-3" />}
+                  mint test {from.symbol}
+                </button>
+              )}
+            </>
           )}
         </>
       )}
