@@ -10,7 +10,7 @@ import {
   walletClient,
   type SwapToken,
 } from "@/lib/web3"
-import { quoteBestRoute, venueLabel, type RoutePlan } from "@/lib/route-engine"
+import { quoteBestRoute, type RoutePlan } from "@/lib/route-engine"
 import { quoteBridge, BRIDGE_FEE_PCT } from "@/lib/bridge"
 import { XmrBridgeFlow } from "@/components/xmr-bridge-flow"
 import { useWallet, connectWallet, switchToSepolia } from "@/hooks/use-wallet"
@@ -270,7 +270,6 @@ export function SwapWidget() {
         ) : rate ? (
           <span className="text-muted-foreground">
             1 {from.symbol} = {fmtAmount(rate)} {to.symbol}
-            {plan && <span className="ml-2 opacity-70">· {venueLabel(plan)}</span>}
             <span className="ml-2 opacity-70">· 0.3% fee/hop</span>
           </span>
         ) : null}

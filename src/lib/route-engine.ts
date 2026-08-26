@@ -64,7 +64,3 @@ export async function quoteBestRoute(
   }
   return null
 }
-
-export function venueLabel(_plan: RoutePlan): string {
-  return "best route"
-}
