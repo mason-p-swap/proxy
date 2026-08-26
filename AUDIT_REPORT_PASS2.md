@@ -1,0 +1,102 @@
+# Proxy Swap — Second-Pass Security Report (Fable 5 Max)
+
+Scope: `MoneyMarket.sol`, AMM (`Pair`/`Router`/`Factory`), `WETH9.sol`, `ChainlinkPriceOracle.sol`, `SettablePriceOracle.sol`, interfaces. Target: Sepolia → mainnet. Prior Opus 4.8 pass fixed three mediums (MM-01 withdraw health check, MM-02 liquidation-cure config bound, ORACLE-02 oracle staleness default).
+
+## 1. Executive Summary
+
+Yes — this deeper pass found issues the first pass did not, and it caught a **regression the first pass's own remediation (MM-01) introduced**.
+
+- **MM-02 and ORACLE-02 are confirmed correct and complete.** All six review lenses independently agree, and I verified the code.
+- **MM-01 is correct for security but regressed on liveness.** It closes the real drain hole and never lets an unsafe withdrawal through (no theft introduced), but it was implemented as an *unconditional* health check instead of the "check only when the user has debt" that its own commit message and the audit report claim. That over-broad implementation created two new low-severity defects and widened a pre-existing medium-severity oracle-DoS onto the withdraw path.
+- **Headline new issue (medium):** `_portfolio()` has no per-asset oracle-failure isolation, so a single stale/unconfigured feed on *any* asset a user holds bricks every health-gated operation for that user — including `liquidate()`. An underwater borrower holding dust of a broken-feed asset becomes un-liquidatable → bad debt. This is largely pre-existing but was extended to `withdraw()` by MM-01.
+
+**Posture:** No critical/high, no fund-theft vector, no reentrancy/CEI/slippage defects (cross-cutting checks came back clean). The one medium is a liveness/insolvency-adjacency issue with an owner on-chain mitigation (price override). Everything else is low or informational, and much of it is inherent-tradeoff or trusted-owner-misconfig territory.
+
+**Counts.** The pass produced 14 adversarially-verified lens-findings that consolidate to **8 distinct issues**:
+
+| Severity | Count | Distinct issues |
+|---|---|---|
+| Critical | 0 | — |
+| High | 0 | — |
+| Medium | 1 | Portfolio-wide oracle DoS (un-liquidatable positions) |
+| Low | 4 | withdraw oracle-liveness regression; withdraw over-restriction (trapped non-collateral funds); supply fee-on-transfer accounting; SettablePriceOracle inverted staleness convention |
+| Info | 3 | Liquidation dust rounding; Factory `feeTo` dead code; Pair LP "ZeroFi LP" branding leak |
+
+## 2. Verdict on the Three Applied Fixes
+
+| Fix | Verdict | Notes |
+|---|---|---|
+| **MM-01** — `withdraw()` now checks `healthFactor(msg.sender) < WAD` | **Correct-but-regressed** | Closes the genuine hole (withdrawing supply that was de-collateralized via `configureReserve` flip while debt is outstanding; covered by `test_withdraw_checksHealthEvenWhenReserveCollateralFlagOff`). Strictly stricter — cannot admit an unsafe withdrawal. **But** implemented unconditionally, not "when the user has debt," so it prices the whole portfolio on every withdrawal → introduces Issues **L1** and **L2** below and widens **M1** onto the withdraw path. |
+| **MM-02** — `_validateConfig` rejects `collateral && liqThreshold*(BPS+bonus) >= BPS*BPS` | **Correct & complete** | Enforces `liqThreshold*(1+bonus) < 1` on **both** `listReserve` (120) and `configureReserve` (141); `configOf` has no other writer. `>=` correctly rejects the exactly-neutral `==` boundary. `uint256` casts prevent overflow. Rejects no realistic config (live zXMR 7500×10750=80.6M < 1e8 passes). No new issue. |
+| **ORACLE-02** — `stalenessBound = maxStaleness==0 ? 24h : maxStaleness`, always enforced | **Correct & complete (aggregator path)** | No path returns an aggregator answer without a freshness bound; `answer>0`, `updatedAt!=0`, `answeredInRound>=roundId` all checked. Override (78) and fixedPrice (92) bypass is by design (manual admin/pegged values). Two consequences, not defects in the fix: (a) it *amplifies* M1/L1 because `maxStaleness=0→24h` now actively reverts a lagging feed that previously (as dead code) never did; (b) the same hardening was **not** mirrored to `SettablePriceOracle` → Issue **L4**. |
+
+## 3. New Confirmed Findings
+
+### M1 — Portfolio-wide oracle DoS: one broken feed bricks all health-gated ops (un-liquidatable positions → bad debt)
+- **Severity:** Medium · **File:** `contracts/src/MoneyMarket.sol:503-539` (drivers at 345/289/265/328) · Confirmed by 1 lens, and it is the root cause the withdraw-path lenses point back to.
+- **What:** `_portfolio()` calls `oracle.getPrice()` for every collateral position (524, gated 522) and every debt position (534, gated 532) with **no per-asset error isolation**. `healthFactor()` (467-471) runs the full `_portfolio` loop *before* its `debtUsd==0` short-circuit. Every health-gated entry point funnels through it: `liquidate` (345), `borrow` (289), `withdraw` (265, now unconditional), `setUseAsCollateral(false)` (328). Both oracle backends genuinely revert on realistic conditions (Chainlink `StalePrice`/`InvalidAggregatorPrice`/`IncompleteRound`; Settable `PriceNotSet`), and a stale aggregator does **not** fall through to `fixedPrice`. So one unpriceable held asset reverts the entire computation.
+- **Exploit:** Asset X (low-cap, Chainlink feed) is listed as collateral. A borrower holds large stable collateral + 1 wei of X (auto-enabled) and borrows near max. X's feed later stops updating >24h. The position goes underwater. Any `liquidate(borrower, …)` call reverts at `healthFactor(user)` (345) before it reaches its own price lookups. The position is un-liquidatable and the protocol accrues bad debt. Non-adversarial variant: any honest holder of X is frozen out of withdraw/borrow the moment X's feed breaks.
+- **Why medium not high:** An on-chain owner mitigation exists — `setOverride(X, price)` is evaluated first in `getPrice` (78), so one tx restores liquidations; `setFixedPrice`/`setOracle` also work. The trigger is environmental (feeds reverting is expected safety behavior), not attacker-forced, and mainnet WETH/USDC feeds are highly reliable. It sits at the medium/high boundary: under a trustless/absent-owner assumption, or if a WETH/USDC-class feed breaks, it is high, and real bad debt can accrue during the outage window before the owner acts.
+- **Fix:** Wrap `oracle.getPrice` in try/catch inside `_portfolio`: treat an unpriceable **collateral** as zero value (fail-safe — it stops backing debt but liquidation of other collateral proceeds), while failing closed for **debt** pricing. Additionally compute `debtUsd` first and return `type(uint256).max` without pricing any collateral when the user has no debt. Consider a guarded/fallback oracle for the liquidation path.
+
+### L1 — MM-01 regression: `withdraw()` couples all withdrawals to every held asset's oracle; freezes zero-debt suppliers and non-collateral withdrawals
+- **Severity:** Low · **File:** `contracts/src/MoneyMarket.sol:265` (root cause: missing `debtUsd==0` short-circuit before pricing, 468-469) · **Confirmed by 5 lenses** (fix-reaudit, economic-precision, liquidation-deep, mev-reentrancy-cross, completeness-critic) — strong convergence.
+- **What:** MM-01 replaced the `if (_isCollateral(asset, msg.sender))`-gated check with an unconditional `healthFactor(msg.sender)`. Because `_portfolio` prices all collateral before the `debtUsd==0` early-return, a stale/unconfigured feed on *any* held collateral now reverts *any* withdrawal — including a **debt-free** withdrawal and a **non-collateral** withdrawal, both of which touched no oracle before the fix. The HF *value* never wrongly blocks a pure supplier (debt-free ⇒ HF=`type(uint256).max`); the revert comes from `getPrice` inside `_portfolio` before the shortcut is reached. Amplified by ORACLE-02: the deployed oracle uses `maxStaleness=0 → 24h`, and WETH is the only aggregator-priced asset, so every WETH-collateral supplier is exposed during a feed lag.
+- **Exploit:** Alice supplies 5 WETH (collateral-enabled) + 10,000 USDC, zero debt. Sepolia ETH/USD lags >24h. `withdraw(USDC, …)` debits her USDC shares, then `healthFactor(Alice)` → `_portfolio` → `getPrice(WETH)` → `StalePrice` → whole withdraw reverts. Pre-fix this succeeded with no oracle read.
+- **Impact bound:** No theft; funds only temporarily locked. Recoverable by feed refresh, owner action (`setOverride`/`setFixedPrice`/`setMaxStaleness`/`setOracle`), or — for the single-stale-feed zero-debt case — the user self-serving via `setUseAsCollateral(WETH,false)` then withdrawing (the disable sets its flag before its own HF check, so `_portfolio` skips the stale asset). Genuinely-new surface in the all-collateral deployment is narrow (disabled/non-collateral withdrawals); collateral-enabled withdrawals were already oracle-coupled pre-fix.
+- **Fix:** Gate the check on the user actually having debt, computed with **no** oracle read — add a cheap `_hasDebt(user)` scanning `scaledDebtOf[reservesList[i]][user]`, then `if (_hasDebt(msg.sender) && healthFactor(msg.sender) < WAD) revert WouldBreakHealth(hf);`. A debt-free user's HF is always max, so skipping the check (and its pricing) is safe and matches the fix's stated intent. Also short-circuit `healthFactor` on `debtUsd==0` before pricing collateral (fixes L1 for all callers and helps M1).
+
+### L2 — MM-01 over-restriction: non-collateral / collateral-disabled deposits of an underwater user are trapped
+- **Severity:** Low · **File:** `contracts/src/MoneyMarket.sol:265` (with `_portfolio` 522, `liquidate` 341) · **Confirmed by 2 lenses** (liquidation-deep, access-governance-dos). No oracle failure required.
+- **What:** The unconditional check also blocks withdrawal of deposits that **don't contribute to the user's collateral** — a reserve listed `collateral=false`, or one the user disabled via `setUseAsCollateral`. Such deposits add nothing to `thresholdUsd` (gated at 522) and can never be seized in `liquidate` (requires `_isCollateral`, 341), so blocking them protects nothing — yet an underwater user (from a *separate* position) can no longer retrieve them. Standard implementations (Aave) run the check only when the withdrawn asset is the user's collateral.
+- **Exploit:** Owner lists TOKEN_X `borrowable=true, collateral=false` (a legal lend-only asset). Alice supplies 1000 TOKEN_X (never collateral) + 1 WETH (collateral), borrows 2000 USDC. WETH falls, HF=0.9. `withdraw(TOKEN_X, 1000)` computes HF<WAD and reverts, though TOKEN_X never backed the loan. In a bad-debt end state (collateral fully liquidated, residual debt) `thresholdUsd=0` pins HF=0 forever, and `liquidate` can never touch TOKEN_X — the deposit is effectively dead if the residual debt exceeds its value.
+- **Impact bound:** Only the user's own funds; recoverable in the ordinary case by repaying/adding collateral. The "permanent" sub-case is a defaulting borrower who already walked away with borrowed funds exceeding their liquidated collateral. The contract cannot distinguish "asset just stopped being your collateral (owner flip — must block, the MM-01 target)" from "never was your collateral (safe to allow)" without per-user history it doesn't keep.
+- **Fix:** Only enforce the health check when the withdrawn asset currently contributes to the user's collateral (`scaledSupply>0 && _isCollateral(asset,user)`); a withdrawal of a non-contributing asset cannot reduce health. The `_hasDebt` gate from L1 also resolves most of this. Separately, address the true root of the MM-01 target hole: guard the `configureReserve` `collateral true→false` transition that instantly un-backs existing borrowers, rather than only papering over it in `withdraw`.
+
+### L3 — `supply()` credits the requested amount, not the amount received (fee-on-transfer / rebasing tokens corrupt accounting)
+- **Severity:** Low · **File:** `contracts/src/MoneyMarket.sol:241` (transfer at 246; `listReserve` only checks decimals at 123) · **Confirmed by 2 lenses** (access-governance-dos, completeness-critic).
+- **What:** `supply()` computes `scaled = amount*WAD/liquidityIndex` from the requested `amount` and credits `scaledSupplyOf`/`totalScaledSupply` before `safeTransferFrom(amount)`. It never measures the balance actually received. For a fee-on-transfer or rebasing-down token the contract receives less than `amount` but credits full `amount`, so aggregate credited supply exceeds the real balance; late withdrawers/liquidations revert on `safeTransfer`.
+- **Exploit:** Owner lists a token with a 1% transfer fee. Alice `supply(1000)`; contract receives 990, credits 1000. Repeated across users, `totalScaledSupply*index` exceeds real balance; the last withdrawer hits `InsufficientBalance` despite positive recorded balance. Rebasing-down produces the same shortfall passively.
+- **Impact bound:** Only reachable via `listReserve` (`onlyOwner`, fully trusted). No offending token in scope today; fee-on-transfer/rebasing non-support is a standard Aave/Compound-class exclusion. Relevant because the real zXMR token / Monero bridge is still TODO per HANDOFF — a bridged asset that charges a transfer fee would silently break the market if listed.
+- **Fix:** Measure `balanceOf(address(this))` before/after the transfer and credit the delta; and/or explicitly document and enforce that only standard non-fee, non-rebasing ERC20s may be listed.
+
+### L4 — `SettablePriceOracle` treats `maxAge==0` as no-staleness — opposite of the hardened Chainlink convention
+- **Severity:** Low · **File:** `contracts/src/SettablePriceOracle.sol:43` · **Confirmed by 1 lens** (completeness-critic). Incomplete mirror of the ORACLE-02 fix.
+- **What:** After ORACLE-02, `ChainlinkPriceOracle` treats `maxStaleness==0` as a safe 24h fallback (85). `SettablePriceOracle` does the inverse: `if (maxAge != 0 && …)` means `maxAge==0` **disables** staleness entirely and returns arbitrarily old prices. The two `IPriceOracle` implementations now carry contradictory zero-semantics, and the committed deploy scripts instantiate `SettablePriceOracle(0)` (staleness OFF) alongside `ChainlinkPriceOracle(0)` (24h ON) — same literal `0`, opposite protection.
+- **Exploit:** Owner deploys `SettablePriceOracle(0)` assuming `0` means a sane default (as it now does for Chainlink) and stops refreshing; `getPrice` returns the last value forever, enabling stale-price under-collateralization with no revert to signal it.
+- **Impact bound:** `SettablePriceOracle` is documented test-only ("Not for production"), staleness-off is a documented testnet posture, and the live market already runs the hardened Chainlink oracle — so this is an incomplete-remediation / API-consistency defect, not a live-prod hole. Fully owner-trusted, no attacker trigger.
+- **Fix:** Make `maxAge==0` fall back to a sane default (mirror `DEFAULT_MAX_STALENESS`) or require a nonzero `maxAge` in the constructor/setter, so both oracles share consistent zero-semantics.
+
+### I1 — Liquidation dust: sub-close-factor dust is un-liquidatable; cap path rounds repay down
+- **Severity:** Info · **File:** `contracts/src/MoneyMarket.sol:354/356/366-368/379` · Confirmed by 1 lens; correctly self-rated info.
+- **What / effects:** (1) `maxRepay = debt*5000/BPS` floors to 0 for `debt<2` units → `liquidate` reverts `ZeroAmount`, so dust underwater positions can't be cleared (interest accrual eventually lifts a 1-unit debt above the threshold; keepers can still `repay()`, so not literally forever). (2) `_toUsd`/`_fromUsd` flooring can drive `collateralSeized` to 0 for dust collateral → `ZeroAmount`. (3) The cap path floors three times (366-368) so the liquidator repays up to ~1 base unit less than fair — a bounded, protocol-safe-direction rounding against the already-underwater borrower. (4) With `borrowIndex>WAD`, a 1-unit `repayAmount` floors `scaledRepay` to 0 (379), seizing dust while reducing no debt; the overpayment accrues to the pool, not an attacker.
+- **Impact:** Every effect is strictly dust-bounded (≤ ~1 base unit / sub-cent); gas dwarfs the dust, so no rational exploit. Inherent fixed-point rounding, not a vulnerability.
+- **Fix (optional hardening):** Round repay **up** (`ceilDiv`) in the cap path; add a dust-clearing path (full seize/repay below a minimum position size) so sub-close-factor dust cannot linger as bad debt.
+
+### I2 — Factory `feeTo`/`feeToSetter` is dead code (Pair implements no protocol fee)
+- **Severity:** Info · **File:** `contracts/src/amm/Factory.sol:7-8, 41-49` · Confirmed by 1 lens.
+- **What:** Factory exposes `feeTo`/`feeToSetter` + setters, but `Pair` has no `kLast`/`_mintFee` and never reads `Factory.feeTo` (verified: zero references). The Uniswap-v2 protocol-fee mechanism these fields drive is entirely absent, so `setFeeTo` is inert and permanent (Pair is fixed bytecode, no upgrade path). Secondary: `setFeeToSetter` has no zero-address guard (48) and the constructor accepts a zero `feeToSetter` (21) — harmless only because the fields are inert.
+- **Impact:** No fund loss. Governance-expectation mismatch: an operator could set `feeTo` expecting revenue that never accrues, or brick `feeToSetter`.
+- **Fix:** Either implement the `kLast`/`_mintFee` path in `Pair.mint`/`burn` reading `Factory.feeTo`, or remove `feeTo`/`feeToSetter`/setters. Add a zero-address guard on `setFeeToSetter` if kept.
+
+### I3 — Pair LP token hardcodes "ZeroFi LP" / "ZFI-LP" branding, permanently on-chain
+- **Severity:** Info · **File:** `contracts/src/amm/Pair.sol:46` · Confirmed by 1 lens.
+- **What:** `ERC20("ZeroFi LP", "ZFI-LP")` is the sole remaining ZeroFi/ZFI reference in `contracts/src`. Every pool from `Factory.createPair` (34) exposes it via `name()`/`symbol()`, baked into deployed bytecode with no setter — it cannot be scrubbed post-deploy the way source/history can. Contradicts the Proxy Swap rebrand and the project's own recorded requirement that the repo never surface ZeroFi/ZFI naming.
+- **Impact:** No exploit; a public, permanent metadata inconsistency (block explorers, wallets, LP aggregators show the old identity).
+- **Fix:** Rename to the current brand (or a neutral "LP Token") **before any further deploys**; already-deployed Sepolia pairs would need redeployment to remove it.
+
+## 4. Uncertain / Needs Review
+
+None. The UNCERTAIN set is empty — every finding this pass was adversarially verified to a CONFIRMED verdict, and I re-verified each against the source.
+
+## 5. Prioritized Remediation Checklist
+
+1. **[Medium — M1] Isolate per-asset oracle failures in `_portfolio`.** try/catch each `getPrice`: treat unpriceable collateral as zero value (fail-safe), fail closed on debt pricing. This is the one issue with real (temporary) insolvency exposure via un-liquidatable positions. Ensure a guarded/override oracle path exists for liquidations before mainnet.
+2. **[Low — L1 + L2, one change] Gate `withdraw()`'s health check on `_hasDebt(msg.sender)` (oracle-free scan) and short-circuit `healthFactor` when `debtUsd==0` before pricing collateral.** This restores MM-01's stated intent, removes the debt-free / non-collateral withdraw DoS, un-traps non-collateral deposits, and also relieves M1 for no-debt users — the single highest-value cleanup. Add a regression test: debt-free supplier withdraws with a stale unrelated feed; underwater user withdraws a non-collateral asset. Keep the existing `test_withdraw_checksHealthEvenWhenReserveCollateralFlagOff` green.
+3. **[Low — L3] Measure received balance in `supply()` (balance delta), or document + enforce standard-ERC20-only listings.** Do this before the real zXMR / bridged token is listed.
+4. **[Low — L4] Harden `SettablePriceOracle`:** `maxAge==0 → DEFAULT` or require nonzero, matching the Chainlink convention.
+5. **[Info — I3] Rename the Pair LP token off "ZeroFi LP"/"ZFI-LP" before any further pool deploys** (existing pairs need redeploy to fully remove).
+6. **[Info — I2] Remove or implement the Factory `feeTo` mechanism; add the missing zero-address guard if kept.**
+7. **[Info — I1] Optional: `ceilDiv` the cap-path repay and add a dust-clearing path.**
+
+**Cross-cutting checks that came back clean** (no action): Router slippage + deadline enforced on all four swap/liquidity entrypoints; `Pair.swap`/`mint`/`burn`/`skim`/`sync` all `nonReentrant`, no flash-swap callback; MoneyMarket state-changers `nonReentrant` with correct CEI (effects before transfers); index-based accounting immune to ERC4626-style donation/inflation; both low-level ETH calls (`WETH9:33`, `Router:193`) check return values.

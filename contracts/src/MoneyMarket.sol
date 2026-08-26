@@ -262,8 +262,10 @@ contract MoneyMarket is ReentrancyGuard, Ownable, Pausable {
         scaledSupplyOf[asset][msg.sender] -= scaled;
         s.totalScaledSupply -= _toU128(scaled);
 
-        uint256 hf = healthFactor(msg.sender);
-        if (hf < WAD) revert WouldBreakHealth(hf);
+        if (_hasDebt(msg.sender)) {
+            uint256 hf = healthFactor(msg.sender);
+            if (hf < WAD) revert WouldBreakHealth(hf);
+        }
 
         IERC20(asset).safeTransfer(msg.sender, amount);
         emit Withdrawn(asset, msg.sender, amount);
@@ -576,6 +578,14 @@ contract MoneyMarket is ReentrancyGuard, Ownable, Pausable {
 
     function _isCollateral(address asset, address user) private view returns (bool) {
         return configOf[asset].collateral && !collateralDisabled[asset][user];
+    }
+
+    function _hasDebt(address user) private view returns (bool) {
+        address[] memory list = reservesList;
+        for (uint256 i = 0; i < list.length; i++) {
+            if (scaledDebtOf[list[i]][user] != 0) return true;
+        }
+        return false;
     }
 
     function _requireListed(address asset) private view {

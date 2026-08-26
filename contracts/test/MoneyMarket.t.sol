@@ -138,6 +138,22 @@ contract MoneyMarketTest is Test {
         market.withdraw(address(weth), type(uint256).max);
     }
 
+    function test_withdraw_debtFreeSupplier_notBlockedByUnpricedHeldAsset() public {
+        MockERC20 t = new MockERC20("T", "T", 18, 0);
+        t.mint(alice, 100e18);
+        vm.prank(admin);
+        market.listReserve(address(t), _cfg(5000, 6000, 500, 1500, 0, 0.033e18, 0.80e18, 0.80e18));
+
+        vm.startPrank(alice);
+        t.approve(address(market), type(uint256).max);
+        market.supply(address(weth), 1e18);
+        market.supply(address(t), 10e18);
+        market.withdraw(address(weth), 0.5e18);
+        vm.stopPrank();
+
+        assertEq(market.supplyBalanceOf(address(weth), alice), 0.5e18);
+    }
+
     function test_listReserve_rejectsLtvAboveThreshold() public {
         MockERC20 t = new MockERC20("T", "T", 18, 1e18);
         vm.prank(admin);

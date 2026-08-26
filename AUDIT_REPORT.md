@@ -6,9 +6,20 @@
 
 ## Remediation status
 
-**Fixed in source (regression-tested, 93/93 tests pass):**
-- **MM-01** — `withdraw()` now always checks health when the user has debt, regardless of the
-  reserve's collateral flag. (`MoneyMarket.sol`)
+> **Update after second audit pass (Fable 5 Max):** a deeper 6-specialist pass re-audited the
+> three fixes below. It confirmed **MM-02 and ORACLE-02 correct and complete**, and caught that
+> the first MM-01 fix (checking health *unconditionally*) introduced a liveness regression:
+> every withdrawal — even by a debt-free supplier — ran the full oracle price scan, so a stale
+> feed on any held asset could block unrelated withdrawals. **MM-01 has been refined** to gate
+> the health check on a cheap, oracle-free "does this user have any debt" scan, matching the
+> original intent. Debt-free suppliers no longer touch the oracle on withdraw; a borrower whose
+> collateral flag was flipped is still caught. Regression-tested; suite now 94/94 green. The
+> second pass surfaced no new critical/high issues. Full detail: `AUDIT_REPORT_PASS2.md`.
+
+**Fixed in source (regression-tested, 94/94 tests pass):**
+- **MM-01** — `withdraw()` now checks health whenever the user has debt (via an oracle-free
+  `_hasDebt` scan), regardless of the reserve's collateral flag — and skips the price scan
+  entirely for debt-free suppliers. (`MoneyMarket.sol`)
 - **MM-02** — `_validateConfig` now rejects any collateral config where
   `liqThreshold × (1 + liqBonus) ≥ 1`, so a listed collateral can always be liquidated back to
   health. (`MoneyMarket.sol`)
