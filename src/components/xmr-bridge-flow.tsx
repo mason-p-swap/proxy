@@ -69,8 +69,8 @@ export function XmrBridgeFlow({ from, to, fromAmount, account }: Props) {
     <div className="mt-3 space-y-3">
       <div className="flex items-start gap-2 rounded-lg border border-border bg-background/40 p-3 text-[11px] leading-relaxed text-muted-foreground">
         <AlertTriangle className="mt-px size-3.5 shrink-0 text-warning" />
-        Native Monero swaps settle through the ZeroFi bridge — the on-chain leg is decentralized, the
-        Monero payout is handled by the bridge.{" "}
+        Native Monero swaps settle through our cross-chain bridge — the on-chain leg is
+        decentralized, the Monero payout is handled by the bridge.{" "}
         {!BRIDGE_IS_LIVE && <span className="text-warning">Demo bridge: no real funds move.</span>}
       </div>
 

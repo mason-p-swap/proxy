@@ -261,7 +261,7 @@ export function SwapWidget() {
           bridgeQuote ? (
             <span className="text-muted-foreground">
               1 {from.symbol} = {fmtAmount(bridgeQuote.rate)} {to.symbol}
-              <span className="ml-2 opacity-70">· via ZeroFi bridge</span>
+              <span className="ml-2 opacity-70">· via bridge</span>
               <span className="ml-2 opacity-70">· {BRIDGE_FEE_PCT}% fee</span>
             </span>
           ) : null

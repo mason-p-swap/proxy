@@ -207,7 +207,7 @@ export function HomePage({ navigate }: Props) {
               },
               {
                 title: "Monero bridge",
-                desc: "Swap all the way to native Monero through the ZeroFi bridge. Coming soon.",
+                desc: "Swap all the way to native Monero through our cross-chain bridge. Coming soon.",
                 Illo: ChainIllo,
               },
               {

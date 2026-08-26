@@ -30,7 +30,7 @@ const FAQ_SECTIONS = [
     items: [
       {
         q: "How is the price set?",
-        a: "Prices come from live on-chain liquidity — either our own zXMR pools or Uniswap, whichever the router finds cheaper for your pair. You see the exact quote before you confirm.",
+        a: "Prices come from live on-chain liquidity, and the router automatically finds the best price for your pair. You see the exact quote before you confirm.",
       },
       {
         q: "What are the fees?",

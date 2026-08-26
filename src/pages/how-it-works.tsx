@@ -18,7 +18,7 @@ const STEPS = [
     n: 3,
     icon: Loader,
     title: "Confirm the swap",
-    desc: "Approve the transaction in your wallet. The router sends it through our own zXMR pools or Uniswap — whichever gives the better price.",
+    desc: "Approve the transaction in your wallet. The router automatically finds the best-priced liquidity for your pair and settles it on-chain.",
   },
   {
     n: 4,
@@ -31,7 +31,7 @@ const STEPS = [
 const FEATURES = [
   { title: "No account", desc: "Swap instantly. No sign-up, no KYC, no email." },
   { title: "Non-custodial", desc: "Coins go from your wallet, through the pool, and back. We never hold them." },
-  { title: "Smart routing", desc: "Each swap routes through our zXMR pools or Uniswap for the best price, automatically." },
+  { title: "Smart routing", desc: "Each swap is auto-routed to the best available on-chain price." },
   { title: "On-chain & verifiable", desc: "Every swap is a single transaction you can verify on the block explorer." },
 ]
 

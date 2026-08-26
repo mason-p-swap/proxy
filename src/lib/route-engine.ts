@@ -1,7 +1,7 @@
 import type { Address } from "viem"
-import { ADDR_AMM, UNISWAP_V2_ROUTER, ROUTER_ABI, publicClient, type SwapToken } from "./web3"
+import { ADDR_AMM, EXTERNAL_ROUTER, ROUTER_ABI, publicClient, type SwapToken } from "./web3"
 
-export type Venue = "zerofi" | "uniswap"
+export type Venue = "own" | "external"
 
 export type RoutePlan = {
   venue: Venue
@@ -15,18 +15,18 @@ export type RouteQuote = {
   amounts: bigint[]
 }
 
-function zerofiPlan(from: SwapToken, to: SwapToken): RoutePlan {
+function ownPlan(from: SwapToken, to: SwapToken): RoutePlan {
   const direct = from.symbol === "zXMR" || to.symbol === "zXMR"
   const path: Address[] = direct
     ? [from.address!, to.address!]
     : [from.address!, ADDR_AMM.zxmr, to.address!]
-  return { venue: "zerofi", router: ADDR_AMM.router, path, viaHub: !direct }
+  return { venue: "own", router: ADDR_AMM.router, path, viaHub: !direct }
 }
 
-function uniswapPlan(from: SwapToken, to: SwapToken): RoutePlan {
+function externalPlan(from: SwapToken, to: SwapToken): RoutePlan {
   return {
-    venue: "uniswap",
-    router: UNISWAP_V2_ROUTER,
+    venue: "external",
+    router: EXTERNAL_ROUTER,
     path: [from.address!, to.address!],
     viaHub: false,
   }
@@ -40,8 +40,8 @@ export function planRoutes(from: SwapToken, to: SwapToken): RoutePlan[] {
   const zxmrInvolved = from.symbol === "zXMR" || to.symbol === "zXMR"
   const nativeInvolved = Boolean(from.isNative || to.isNative)
 
-  if (zxmrInvolved || nativeInvolved) return [zerofiPlan(from, to)]
-  return [uniswapPlan(from, to), zerofiPlan(from, to)]
+  if (zxmrInvolved || nativeInvolved) return [ownPlan(from, to)]
+  return [externalPlan(from, to), ownPlan(from, to)]
 }
 
 export async function quoteBestRoute(
@@ -65,7 +65,6 @@ export async function quoteBestRoute(
   return null
 }
 
-export function venueLabel(plan: RoutePlan): string {
-  if (plan.venue === "uniswap") return "via Uniswap"
-  return plan.viaHub ? "via ZeroFi pool · zXMR hub" : "via ZeroFi pool"
+export function venueLabel(_plan: RoutePlan): string {
+  return "best route"
 }
