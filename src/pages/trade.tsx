@@ -28,6 +28,23 @@ import { cn } from "@/lib/utils"
 
 const SLIPPAGE_BPS = 50n
 
+const EXPIRY_OPTS: { label: string; ms: number | null }[] = [
+  { label: "1H", ms: 60 * 60 * 1000 },
+  { label: "1D", ms: 24 * 60 * 60 * 1000 },
+  { label: "1W", ms: 7 * 24 * 60 * 60 * 1000 },
+  { label: "Never", ms: null },
+]
+
+function untilStr(ts: number): string {
+  const ms = ts - Date.now()
+  if (ms <= 0) return "expired"
+  const m = Math.floor(ms / 60000)
+  if (m < 60) return `${m}m`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h`
+  return `${Math.floor(h / 24)}d`
+}
+
 export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => void }) {
   const { hasProvider, account, connecting, onSepolia } = useWallet()
   const price = usePrices()
@@ -43,6 +60,7 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
   const [amount, setAmount] = useState("")
   const [limitPrice, setLimitPrice] = useState("")
   const [priceEdited, setPriceEdited] = useState(false)
+  const [expiryMs, setExpiryMs] = useState<number | null>(24 * 60 * 60 * 1000)
   const [busy, setBusy] = useState<string | null>(null)
   const [quoteOut, setQuoteOut] = useState<bigint | null>(null)
   const [orders, setOrders] = useState<LimitOrder[]>([])
@@ -68,6 +86,8 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
 
   useEffect(() => {
     setOrders(syncFills(mkt || 0))
+    const t = setInterval(() => setOrders(syncFills(mkt || 0)), 15000)
+    return () => clearInterval(t)
   }, [mkt])
 
   useEffect(() => {
@@ -155,7 +175,8 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
   const placeLimit = () => {
     const lp = parseFloat(limitPrice) || 0
     if (amt <= 0 || lp <= 0) return
-    createLimitOrder({ side, base: "zXMR", quote: "USDC", amount: amt, limitPrice: lp })
+    const expiresAt = expiryMs ? Date.now() + expiryMs : undefined
+    createLimitOrder({ side, base: "zXMR", quote: "USDC", amount: amt, limitPrice: lp, expiresAt })
     setOrders(syncFills(mkt || 0))
     setAmount("")
     toast.success(`Limit ${side} order placed`)
@@ -278,6 +299,28 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
                 </div>
               )}
 
+              {type === "limit" && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] text-muted-foreground">Expiry</label>
+                  <div className="flex gap-1">
+                    {EXPIRY_OPTS.map((o) => (
+                      <button
+                        key={o.label}
+                        onClick={() => setExpiryMs(o.ms)}
+                        className={cn(
+                          "flex-1 rounded-md border py-1.5 text-[11px] font-bold transition-colors",
+                          expiryMs === o.ms
+                            ? "border-transparent bg-white/10 text-foreground"
+                            : "border-input text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="min-h-4 px-1 text-[11px] text-muted-foreground">
                 {type === "market" && estOut != null && (
                   <span>
@@ -380,10 +423,11 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
                     {fmtAmount(o.amount)} zXMR <span className="text-muted-foreground">@ ${fmtAmount(o.limitPrice)}</span>
                   </span>
                   <span className="text-[10px] text-muted-foreground">
-                    <span className={cn("font-bold uppercase", o.status === "filled" ? "text-success" : o.status === "cancelled" ? "text-muted-foreground" : "text-warning")}>
+                    <span className={cn("font-bold uppercase", o.status === "filled" ? "text-success" : o.status === "open" ? "text-warning" : "text-muted-foreground")}>
                       {o.status}
                     </span>
-                    {" · "}{timeAgo(o.filledAt ?? o.createdAt)}
+                    {" · "}
+                    {o.status === "open" && o.expiresAt ? `exp ${untilStr(o.expiresAt)}` : timeAgo(o.filledAt ?? o.createdAt)}
                   </span>
                   {o.status === "open" ? (
                     <button

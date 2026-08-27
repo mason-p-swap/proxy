@@ -1,5 +1,5 @@
 export type OrderSide = "buy" | "sell"
-export type OrderStatus = "open" | "filled" | "cancelled"
+export type OrderStatus = "open" | "filled" | "cancelled" | "expired"
 
 export type LimitOrder = {
   id: string
@@ -11,6 +11,7 @@ export type LimitOrder = {
   status: OrderStatus
   createdAt: number
   filledAt?: number
+  expiresAt?: number
 }
 
 const STORAGE_KEY = "proxyswap.limitorders.v1"
@@ -42,6 +43,7 @@ export function createLimitOrder(params: {
   quote: string
   amount: number
   limitPrice: number
+  expiresAt?: number
 }): LimitOrder {
   const order: LimitOrder = {
     id: code(),
@@ -52,6 +54,7 @@ export function createLimitOrder(params: {
     limitPrice: params.limitPrice,
     status: "open",
     createdAt: Date.now(),
+    expiresAt: params.expiresAt,
   }
   const all = loadAll()
   all.push(order)
@@ -68,13 +71,19 @@ export function cancelOrder(id: string): void {
 
 export function syncFills(currentPrice: number): LimitOrder[] {
   const all = loadAll()
+  const now = Date.now()
   let changed = false
   for (const o of all) {
     if (o.status !== "open") continue
+    if (o.expiresAt && now >= o.expiresAt) {
+      o.status = "expired"
+      changed = true
+      continue
+    }
     const hit = o.side === "buy" ? currentPrice <= o.limitPrice : currentPrice >= o.limitPrice
     if (hit) {
       o.status = "filled"
-      o.filledAt = Date.now()
+      o.filledAt = now
       changed = true
     }
   }
