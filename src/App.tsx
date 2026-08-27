@@ -3,6 +3,7 @@ import { TopBar } from "@/components/top-bar"
 import { BlocksBackground } from "@/components/blocks-background"
 import { SiteFooter } from "@/components/site-footer"
 import { HomePage } from "@/pages/home"
+import { TradePage } from "@/pages/trade"
 import { MarketsPage } from "@/pages/markets"
 import { DashboardPage } from "@/pages/dashboard"
 import { SupplyPage } from "@/pages/supply"
@@ -22,6 +23,7 @@ function AppContent() {
       <TopBar route={route} navigate={navigate} />
       <main>
         {route.name === "home" && <HomePage navigate={navigate} />}
+        {route.name === "trade" && <TradePage navigate={navigate} />}
         {route.name === "markets" && <MarketsPage navigate={navigate} />}
         {route.name === "defi" && <DashboardPage navigate={navigate} />}
         {route.name === "supply" && <SupplyPage navigate={navigate} />}

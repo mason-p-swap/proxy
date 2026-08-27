@@ -1,0 +1,87 @@
+export type OrderSide = "buy" | "sell"
+export type OrderStatus = "open" | "filled" | "cancelled"
+
+export type LimitOrder = {
+  id: string
+  side: OrderSide
+  base: string
+  quote: string
+  amount: number
+  limitPrice: number
+  status: OrderStatus
+  createdAt: number
+  filledAt?: number
+}
+
+const STORAGE_KEY = "proxyswap.limitorders.v1"
+
+function loadAll(): LimitOrder[] {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]")
+  } catch {
+    return []
+  }
+}
+
+function persistAll(orders: LimitOrder[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(orders))
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+function code(): string {
+  const part = () => Math.random().toString(36).slice(2, 6).toUpperCase()
+  return `LO-${part()}`
+}
+
+export function createLimitOrder(params: {
+  side: OrderSide
+  base: string
+  quote: string
+  amount: number
+  limitPrice: number
+}): LimitOrder {
+  const order: LimitOrder = {
+    id: code(),
+    side: params.side,
+    base: params.base,
+    quote: params.quote,
+    amount: params.amount,
+    limitPrice: params.limitPrice,
+    status: "open",
+    createdAt: Date.now(),
+  }
+  const all = loadAll()
+  all.push(order)
+  persistAll(all)
+  return order
+}
+
+export function cancelOrder(id: string): void {
+  const all = loadAll()
+  const o = all.find((x) => x.id === id)
+  if (o && o.status === "open") o.status = "cancelled"
+  persistAll(all)
+}
+
+export function syncFills(currentPrice: number): LimitOrder[] {
+  const all = loadAll()
+  let changed = false
+  for (const o of all) {
+    if (o.status !== "open") continue
+    const hit = o.side === "buy" ? currentPrice <= o.limitPrice : currentPrice >= o.limitPrice
+    if (hit) {
+      o.status = "filled"
+      o.filledAt = Date.now()
+      changed = true
+    }
+  }
+  if (changed) persistAll(all)
+  return [...all].sort((a, b) => b.createdAt - a.createdAt)
+}
+
+export function listOrders(): LimitOrder[] {
+  return [...loadAll()].sort((a, b) => b.createdAt - a.createdAt)
+}

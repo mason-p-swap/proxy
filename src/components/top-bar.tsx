@@ -14,6 +14,7 @@ type Props = {
 
 const NAV_ITEMS: { label: string; route: Route }[] = [
   { label: "Exchange", route: { name: "home" } },
+  { label: "Trade", route: { name: "trade" } },
   { label: "DeFi", route: { name: "defi" } },
   { label: "Markets", route: { name: "markets" } },
   { label: "How it works", route: { name: "how" } },

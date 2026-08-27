@@ -10,6 +10,7 @@ export type Coin = {
 
 export type Route =
   | { name: "home" }
+  | { name: "trade" }
   | { name: "markets" }
   | { name: "defi" }
   | { name: "supply" }
