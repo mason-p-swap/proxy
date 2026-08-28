@@ -98,6 +98,7 @@ export const SWAP_TOKENS: SwapToken[] = [
 
 export const ROUTER_ABI = parseAbi([
   "function getAmountsOut(uint256 amountIn, address[] path) view returns (uint256[])",
+  "function getReserves(address tokenA, address tokenB) view returns (uint256 reserveA, uint256 reserveB)",
   "function swapExactTokensForTokens(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline) returns (uint256[])",
   "function swapExactETHForTokens(uint256 amountOutMin, address[] path, address to, uint256 deadline) payable returns (uint256[])",
   "function swapExactTokensForETH(uint256 amountIn, uint256 amountOutMin, address[] path, address to, uint256 deadline) returns (uint256[])",

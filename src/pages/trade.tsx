@@ -21,6 +21,7 @@ import {
 } from "@/lib/orders"
 import { useWallet, connectWallet, switchToSepolia } from "@/hooks/use-wallet"
 import { PriceChart } from "@/components/price-chart"
+import { OrderBook } from "@/components/order-book"
 import { CryptoIcon } from "@/components/crypto-icon"
 import { fmtAmount, fmtUsd, timeAgo } from "@/lib/format"
 import { Loader2, Wallet, AlertTriangle, Droplets, X } from "lucide-react"
@@ -224,7 +225,13 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
-          <PriceChart anchor={mkt} />
+          <div className="space-y-4">
+            <PriceChart anchor={mkt} />
+            <OrderBook
+              refreshKey={refreshKey}
+              onPickPrice={(p) => { setLimitPrice(p.toFixed(2)); setPriceEdited(true); setType("limit") }}
+            />
+          </div>
 
           <div className="rounded-xl border border-border/60 bg-card/40 p-4">
             <div className="grid grid-cols-2 gap-1 rounded-lg bg-background/50 p-1">
@@ -400,6 +407,20 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
                   simulated; a keeper executes them for real once the backend is live.
                 </p>
               )}
+
+              <div className="rounded-lg border border-border/60 bg-background/30 p-2.5 text-[10px] text-muted-foreground">
+                <div className="flex justify-between">
+                  <span>Taker fee</span>
+                  <span className="font-semibold text-foreground">0.30%</span>
+                </div>
+                <div className="mt-0.5 flex justify-between">
+                  <span>Maker fee</span>
+                  <span className="font-semibold text-foreground">0.00%</span>
+                </div>
+                <p className="mt-1.5 leading-relaxed opacity-80">
+                  Trades settle against the liquidity pool. The fee accrues to suppliers — it's the staking yield they earn.
+                </p>
+              </div>
             </div>
           </div>
         </div>
