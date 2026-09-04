@@ -31,7 +31,7 @@ function WalletButton() {
       <button
         onClick={connectWallet}
         disabled={connecting}
-        className="flex items-center gap-1.5 rounded-md border border-border bg-card/60 px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-foreground/30 disabled:opacity-60"
+        className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-foreground/30 disabled:opacity-60"
       >
         {connecting ? <Loader2 className="size-3.5 animate-spin" /> : <Wallet className="size-3.5" />}
         {connecting ? "Connecting…" : "Connect Wallet"}
@@ -70,7 +70,7 @@ function WalletMenu({ account }: { account: string }) {
     <div className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 rounded-md border border-border bg-card/60 px-3 py-1.5 text-xs transition-colors hover:border-foreground/30"
+        className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs transition-colors hover:border-foreground/30"
       >
         <span className="size-1.5 rounded-full bg-success" />
         <span className="font-mono font-semibold text-foreground">{shortAddress(account)}</span>

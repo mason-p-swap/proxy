@@ -90,7 +90,7 @@ export function BorrowModal({ market, onClose }: Props) {
             </DialogHeader>
 
             <div className="space-y-4 px-5 pb-5">
-              <div className="flex items-center justify-between rounded-lg border border-border/60 bg-card/40 px-3.5 py-2.5 text-xs">
+              <div className="flex items-center justify-between rounded-lg border border-border/60 bg-card px-3.5 py-2.5 text-xs">
                 <span className="text-muted-foreground">Your collateral</span>
                 <div className="flex items-center gap-2">
                   {PORTFOLIO.supplied.map((p) => (
@@ -111,7 +111,7 @@ export function BorrowModal({ market, onClose }: Props) {
                     Max: {fmtAmount(maxBorrowTokens)} {market.symbol}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 rounded-lg border border-input bg-background/50 px-3 py-2.5 focus-within:border-foreground/30">
+                <div className="flex items-center gap-2 rounded-lg border border-input bg-background px-3 py-2.5 focus-within:border-foreground/30">
                   <input
                     autoFocus
                     inputMode="decimal"
@@ -133,7 +133,7 @@ export function BorrowModal({ market, onClose }: Props) {
                 </div>
               </div>
 
-              <div className="space-y-2 rounded-lg border border-border/60 bg-card/40 p-3.5 text-xs">
+              <div className="space-y-2 rounded-lg border border-border/60 bg-card p-3.5 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Borrow APY</span>
                   <span className="font-bold tabular-nums text-foreground">

@@ -208,7 +208,7 @@ export function SwapWidget() {
     connected && !bridgeInvolved && !!quoteOut && !!plan && !quoting && !quoteErr && amt > 0 && !overBalance && busy === null
 
   return (
-    <div className="relative w-full rounded-xl border border-border bg-card/60 p-5 backdrop-blur-md">
+    <div className="relative w-full rounded-xl border border-border bg-card p-5 backdrop-blur-md">
       <TokenField
         label="You pay"
         token={from}
@@ -285,7 +285,7 @@ export function SwapWidget() {
       ) : (
         <>
           {!hasProvider && (
-            <div className="mt-4 flex items-center gap-2 rounded-lg border border-border bg-background/40 p-3 text-[11px] text-muted-foreground">
+            <div className="mt-4 flex items-center gap-2 rounded-lg border border-border bg-background p-3 text-[11px] text-muted-foreground">
               <Wallet className="size-3.5" /> install MetaMask to swap on-chain.
             </div>
           )}
@@ -370,7 +370,7 @@ function TokenField({
   return (
     <div className="space-y-1.5">
       <label className="text-[11px] text-muted-foreground">{label}</label>
-      <div className="flex rounded-lg border border-input bg-background/50">
+      <div className="flex rounded-lg border border-input bg-background">
         <div className="flex min-w-0 flex-1 items-center px-3 py-3">
           {loading ? (
             <Loader2 className="size-4 animate-spin text-muted-foreground" />

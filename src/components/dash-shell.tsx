@@ -94,7 +94,7 @@ export function WalletBanner({ mm }: { mm: MoneyMarket }) {
   if (mm.connected) return null
   if (!mm.hasProvider) {
     return (
-      <div className="mb-6 flex items-center gap-3 rounded-xl border border-border bg-card/40 p-4 text-xs text-muted-foreground">
+      <div className="mb-6 flex items-center gap-3 rounded-xl border border-border bg-card p-4 text-xs text-muted-foreground">
         <Wallet className="size-4 shrink-0" />
         market data is live from the chain. install MetaMask to supply, borrow, and manage a position.
       </div>
@@ -102,7 +102,7 @@ export function WalletBanner({ mm }: { mm: MoneyMarket }) {
   }
   if (!mm.account) {
     return (
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card/40 p-4">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
         <span className="text-xs text-muted-foreground">connect your wallet to see and manage your position.</span>
         <button
           onClick={connectWallet}

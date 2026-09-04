@@ -75,7 +75,7 @@ export function MarketsPage({ navigate }: Props) {
             { label: "24h Volume", value: fmtUsd(1.84e9, { compact: true }) },
             { label: "Active Coins", value: String(COINS.length) },
           ].map((s) => (
-            <div key={s.label} className="rounded-xl border border-border/60 bg-card/40 p-4">
+            <div key={s.label} className="rounded-xl border border-border/60 bg-card p-4">
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{s.label}</div>
               <div className="mt-1 text-lg font-bold tabular-nums text-foreground">{s.value}</div>
             </div>
@@ -83,7 +83,7 @@ export function MarketsPage({ navigate }: Props) {
         </div>
 
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="flex flex-1 items-center gap-2 rounded-lg border border-input bg-background/50 px-3 py-2">
+          <div className="flex flex-1 items-center gap-2 rounded-lg border border-input bg-background px-3 py-2">
             <Search className="size-4 shrink-0 text-muted-foreground" />
             <input
               value={query}
@@ -92,7 +92,7 @@ export function MarketsPage({ navigate }: Props) {
               className="h-5 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none"
             />
           </div>
-          <div className="flex items-center gap-1 rounded-lg border border-input bg-background/50 p-1">
+          <div className="flex items-center gap-1 rounded-lg border border-input bg-background p-1">
             {(["vol", "price", "change"] as const).map((s) => (
               <button
                 key={s}

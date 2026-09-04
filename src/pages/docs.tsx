@@ -336,7 +336,7 @@ function Callout({ children }: { children: React.ReactNode }) {
 
 function Formula({ children }: { children: React.ReactNode }) {
   return (
-    <div className="my-4 rounded-lg border border-border/60 bg-background/40 px-4 py-3 font-mono text-xs text-foreground">
+    <div className="my-4 rounded-lg border border-border/60 bg-background px-4 py-3 font-mono text-xs text-foreground">
       {children}
     </div>
   )
@@ -350,7 +350,7 @@ function ContractRow({ name, addr }: { name: string; addr: string }) {
     setTimeout(() => setCopied(false), 2000)
   }
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-card/40 px-3 py-2.5">
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-card px-3 py-2.5">
       <span className="w-28 shrink-0 text-xs font-bold text-foreground">{name}</span>
       <span className="min-w-0 flex-1 break-all font-mono text-[11px] text-muted-foreground">{addr}</span>
       <button onClick={copy} className="text-muted-foreground transition-colors hover:text-foreground" title="copy address">

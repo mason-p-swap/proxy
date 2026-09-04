@@ -63,7 +63,7 @@ export function MarketActionModal({ target, onClose, mm }: Props) {
               </DialogTitle>
             </DialogHeader>
             <p className="text-[11px] leading-relaxed text-muted-foreground">{def.help}.</p>
-            <div className="flex rounded-lg border border-input bg-background/50">
+            <div className="flex rounded-lg border border-input bg-background">
               <input
                 autoFocus
                 type="text"

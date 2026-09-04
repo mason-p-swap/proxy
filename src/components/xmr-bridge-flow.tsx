@@ -67,7 +67,7 @@ export function XmrBridgeFlow({ from, to, fromAmount, account }: Props) {
 
   return (
     <div className="mt-3 space-y-3">
-      <div className="flex items-start gap-2 rounded-lg border border-border bg-background/40 p-3 text-[11px] leading-relaxed text-muted-foreground">
+      <div className="flex items-start gap-2 rounded-lg border border-border bg-background p-3 text-[11px] leading-relaxed text-muted-foreground">
         <AlertTriangle className="mt-px size-3.5 shrink-0 text-warning" />
         Native Monero swaps settle through our cross-chain bridge — the on-chain leg is
         decentralized, the Monero payout is handled by the bridge.{" "}
@@ -83,7 +83,7 @@ export function XmrBridgeFlow({ from, to, fromAmount, account }: Props) {
           onChange={(e) => setPayout(e.target.value)}
           placeholder={xmrOut ? "4… or 8… Monero address" : "0x… address"}
           spellCheck={false}
-          className="w-full rounded-lg border border-input bg-background/50 px-3 py-3 font-mono text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="w-full rounded-lg border border-input bg-background px-3 py-3 font-mono text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
       </div>
 
@@ -112,7 +112,7 @@ function OrderCard({ order, onReset }: { order: BridgeOrder; onReset: () => void
   const toAmt = fmtAmount(Number(order.toAmount))
 
   return (
-    <div className="mt-3 overflow-hidden rounded-xl border border-border bg-background/40">
+    <div className="mt-3 overflow-hidden rounded-xl border border-border bg-background">
       <div className="flex items-center justify-between gap-2 border-b border-border/60 px-4 py-3">
         <div className="flex items-center gap-2">
           {done ? (
@@ -156,7 +156,7 @@ function OrderCard({ order, onReset }: { order: BridgeOrder; onReset: () => void
       </div>
 
       {!done && (
-        <div className="border-t border-border/60 bg-card/40 px-4 py-3">
+        <div className="border-t border-border/60 bg-card px-4 py-3">
           <div className="text-[11px] text-muted-foreground">
             Send exactly <span className="font-bold text-foreground">{fromAmt} {order.depositAsset}</span> to
           </div>
@@ -204,7 +204,7 @@ function CopyRow({ value }: { value: string }) {
   return (
     <button
       onClick={copy}
-      className="flex w-full items-center gap-2 rounded-md border border-input bg-card/60 px-2.5 py-2 text-left transition-colors hover:border-foreground/30"
+      className="flex w-full items-center gap-2 rounded-md border border-input bg-card px-2.5 py-2 text-left transition-colors hover:border-foreground/30"
     >
       <span className="min-w-0 flex-1 break-all font-mono text-[10px] text-foreground/90">{value}</span>
       {copied ? <Check className="size-3.5 shrink-0 text-success" /> : <Copy className="size-3.5 shrink-0 text-muted-foreground" />}

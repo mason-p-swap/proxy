@@ -41,7 +41,7 @@ export function SupplyPage({ navigate }: Props) {
           const r = mm.reserves[a.key]
           const cfg = mm.configs[a.key]
           return (
-            <div key={a.key} className="rounded-xl border border-border/60 bg-card/50 p-4 backdrop-blur-sm">
+            <div key={a.key} className="rounded-xl border border-border/60 bg-card p-4 backdrop-blur-sm">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
                   <CryptoIcon symbol={a.icon} size={24} />
@@ -63,7 +63,7 @@ export function SupplyPage({ navigate }: Props) {
         })}
       </div>
 
-      <div className="mb-4 flex items-center gap-2 rounded-full border border-input bg-background/50 px-4 py-2.5">
+      <div className="mb-4 flex items-center gap-2 rounded-full border border-input bg-background px-4 py-2.5">
         <Search className="size-4 shrink-0 text-muted-foreground" />
         <input
           value={query}
@@ -73,7 +73,7 @@ export function SupplyPage({ navigate }: Props) {
         />
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border/60 bg-card/40">
+      <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] border-collapse text-left">
             <thead>

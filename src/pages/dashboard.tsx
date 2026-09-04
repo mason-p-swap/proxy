@@ -80,8 +80,8 @@ export function DashboardPage({ navigate }: Props) {
       </div>
 
       {!mm.connected && (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-border/60 bg-card/40 px-6 py-20 text-center">
-          <div className="mb-4 flex size-14 items-center justify-center rounded-2xl border border-border/60 bg-background/50">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-border/60 bg-card px-6 py-20 text-center">
+          <div className="mb-4 flex size-14 items-center justify-center rounded-2xl border border-border/60 bg-background">
             <Wallet className="size-6 text-muted-foreground" />
           </div>
           <h2 className="text-lg font-bold text-foreground">Connect your wallet</h2>
@@ -114,7 +114,7 @@ export function DashboardPage({ navigate }: Props) {
       {mm.connected && (
         <>
           <div className="mb-6 grid gap-4 lg:grid-cols-[minmax(260px,1fr)_1.4fr]">
-            <div className="rounded-xl border border-border/60 bg-card/40 p-5">
+            <div className="rounded-xl border border-border/60 bg-card p-5">
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">balance</div>
               <div className="mt-1 text-3xl font-bold tabular-nums text-foreground">{fmtUsd(summary.netWorth)}</div>
               <div className="mt-4 space-y-2 border-t border-border/60 pt-4 text-xs">
@@ -133,7 +133,7 @@ export function DashboardPage({ navigate }: Props) {
               </div>
             </div>
 
-            <div className="rounded-xl border border-border/60 bg-card/40 p-5">
+            <div className="rounded-xl border border-border/60 bg-card p-5">
               <div className="mb-4 flex items-center justify-between">
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground">position shape</span>
                 <span className="flex items-center gap-3 text-[10px] text-muted-foreground">
@@ -186,7 +186,7 @@ export function DashboardPage({ navigate }: Props) {
           </div>
 
           {mm.accountData && mm.accountData.powerUsd > 0n && (
-            <div className="mb-6 rounded-xl border border-border/60 bg-card/40 p-4">
+            <div className="mb-6 rounded-xl border border-border/60 bg-card p-4">
               <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground">
                 <span>borrow power used</span>
                 <span className="tabular-nums">
@@ -235,7 +235,7 @@ export function DashboardPage({ navigate }: Props) {
             )}
 
             {hasPositions && (
-              <div className="overflow-hidden rounded-xl border border-border/60 bg-card/40">
+              <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
                 <div className="divide-y divide-border/40">
                   {supplies.map((a) => {
                     const r = mm.reserves[a.key]
@@ -288,7 +288,7 @@ export function DashboardPage({ navigate }: Props) {
             )}
           </div>
 
-          <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-border/60 bg-card/30 px-4 py-3">
+          <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-border/60 bg-card px-4 py-3">
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground">test faucets</span>
             {MARKET_ASSETS.map((a) => (
               <button

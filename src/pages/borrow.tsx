@@ -35,17 +35,17 @@ export function BorrowPage({ navigate }: Props) {
 
       {mm.connected && mm.accountData && (
         <div className="mb-6 grid gap-3 md:grid-cols-3">
-          <div className="rounded-xl border border-border/60 bg-card/40 p-4">
+          <div className="rounded-xl border border-border/60 bg-card p-4">
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Available to Borrow</div>
             <div className="mt-1 text-lg font-bold tabular-nums text-foreground">
               {fmtUsd(Number(formatUnits(mm.accountData.availableUsd, 18)))}
             </div>
           </div>
-          <div className="rounded-xl border border-border/60 bg-card/40 p-4">
+          <div className="rounded-xl border border-border/60 bg-card p-4">
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Health Factor</div>
             <div className={cn("mt-1 text-lg font-bold tabular-nums", hfColorOf(mm.hf))}>{hfDisplayOf(mm.hf)}</div>
           </div>
-          <div className="rounded-xl border border-border/60 bg-card/40 p-4">
+          <div className="rounded-xl border border-border/60 bg-card p-4">
             <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground">
               <span>borrow power used</span>
               <span className="tabular-nums">{mm.powerUsedPct.toFixed(0)}%</span>
@@ -73,7 +73,7 @@ export function BorrowPage({ navigate }: Props) {
         </div>
       )}
 
-      <div className="mb-4 flex items-center gap-2 rounded-full border border-input bg-background/50 px-4 py-2.5">
+      <div className="mb-4 flex items-center gap-2 rounded-full border border-input bg-background px-4 py-2.5">
         <Search className="size-4 shrink-0 text-muted-foreground" />
         <input
           value={query}
@@ -83,7 +83,7 @@ export function BorrowPage({ navigate }: Props) {
         />
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border/60 bg-card/40">
+      <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] border-collapse text-left">
             <thead>

@@ -233,8 +233,8 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
             />
           </div>
 
-          <div className="rounded-xl border border-border/60 bg-card/40 p-4">
-            <div className="grid grid-cols-2 gap-1 rounded-lg bg-background/50 p-1">
+          <div className="rounded-xl border border-border/60 bg-card p-4">
+            <div className="grid grid-cols-2 gap-1 rounded-lg bg-background p-1">
               <button
                 onClick={() => setSide("buy")}
                 className={cn("rounded-md py-2 text-sm font-bold transition-colors", side === "buy" ? "bg-success text-success-foreground" : "text-muted-foreground hover:text-foreground")}
@@ -267,7 +267,7 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
             <div className="mt-4 space-y-3">
               <div className="space-y-1.5">
                 <label className="text-[11px] text-muted-foreground">{amountLabel}</label>
-                <div className="flex items-center rounded-lg border border-input bg-background/50 px-3 py-2.5">
+                <div className="flex items-center rounded-lg border border-input bg-background px-3 py-2.5">
                   <input
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
@@ -293,7 +293,7 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
               {type === "limit" && (
                 <div className="space-y-1.5">
                   <label className="text-[11px] text-muted-foreground">Limit price (USD)</label>
-                  <div className="flex items-center rounded-lg border border-input bg-background/50 px-3 py-2.5">
+                  <div className="flex items-center rounded-lg border border-input bg-background px-3 py-2.5">
                     <span className="mr-1 text-sm text-muted-foreground">$</span>
                     <input
                       value={limitPrice}
@@ -343,7 +343,7 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
               </div>
 
               {!hasProvider && (
-                <div className="flex items-center gap-2 rounded-lg border border-border bg-background/40 p-3 text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-2 rounded-lg border border-border bg-background p-3 text-[11px] text-muted-foreground">
                   <Wallet className="size-3.5" /> install MetaMask to trade on-chain.
                 </div>
               )}
@@ -402,13 +402,13 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
               )}
 
               {type === "limit" && (
-                <p className="rounded-lg border border-border/60 bg-background/30 p-2.5 text-[10px] leading-relaxed text-muted-foreground">
+                <p className="rounded-lg border border-border/60 bg-background p-2.5 text-[10px] leading-relaxed text-muted-foreground">
                   Limit orders are tracked here and fill when the market crosses your price. In this preview the fill is
                   simulated; a keeper executes them for real once the backend is live.
                 </p>
               )}
 
-              <div className="rounded-lg border border-border/60 bg-background/30 p-2.5 text-[10px] text-muted-foreground">
+              <div className="rounded-lg border border-border/60 bg-background p-2.5 text-[10px] text-muted-foreground">
                 <div className="flex justify-between">
                   <span>Taker fee</span>
                   <span className="font-semibold text-foreground">0.30%</span>
@@ -425,7 +425,7 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
           </div>
         </div>
 
-        <div className="mt-4 overflow-hidden rounded-xl border border-border/60 bg-card/40">
+        <div className="mt-4 overflow-hidden rounded-xl border border-border/60 bg-card">
           <div className="border-b border-border/60 px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
             Orders
           </div>

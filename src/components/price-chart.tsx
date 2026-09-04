@@ -59,7 +59,7 @@ export function PriceChart({ anchor }: Props) {
   const shownPrice = hc ? hc.c : series?.last
 
   return (
-    <div className="rounded-xl border border-border/60 bg-card/40 p-4">
+    <div className="rounded-xl border border-border/60 bg-card p-4">
       <div className="mb-3 flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2">

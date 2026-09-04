@@ -78,7 +78,7 @@ function Stat({
   sub?: string
 }) {
   return (
-    <div className="rounded-xl border border-border/60 bg-card/40 p-4">
+    <div className="rounded-xl border border-border/60 bg-card p-4">
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className={cn("mt-1 text-lg font-bold tabular-nums text-foreground", valueClass)}>
         {value}
@@ -143,7 +143,7 @@ export function SimulatorPage() {
 
         <div
           className={cn(
-            "mb-6 flex items-center justify-between rounded-xl border bg-card/40 px-5 py-4",
+            "mb-6 flex items-center justify-between rounded-xl border bg-card px-5 py-4",
             risk === "danger" ? "border-red-500/40" : "border-border/60"
           )}
         >
@@ -184,7 +184,7 @@ export function SimulatorPage() {
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
           <div className="space-y-5">
-            <div className="rounded-xl border border-border/60 bg-card/40 p-5">
+            <div className="rounded-xl border border-border/60 bg-card p-5">
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <CryptoIcon symbol="ETH" size={22} />
@@ -213,7 +213,7 @@ export function SimulatorPage() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-border/60 bg-card/40 p-5">
+            <div className="rounded-xl border border-border/60 bg-card p-5">
               <div className="mb-3 flex items-center justify-between">
                 <span className="text-sm font-bold text-foreground">Bob's collateral</span>
                 <span className="font-bold tabular-nums text-foreground">
@@ -232,7 +232,7 @@ export function SimulatorPage() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-border/60 bg-card/40 p-5">
+            <div className="rounded-xl border border-border/60 bg-card p-5">
               <div className="mb-3 flex items-center justify-between">
                 <span className="text-sm font-bold text-foreground">Bob's borrow</span>
                 <span className="font-bold tabular-nums text-foreground">
@@ -252,7 +252,7 @@ export function SimulatorPage() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-border/60 bg-card/40 p-5">
+            <div className="rounded-xl border border-border/60 bg-card p-5">
               <div className="mb-3 flex items-center justify-between">
                 <span className="text-sm font-bold text-foreground">Alice's supply</span>
                 <span className="font-bold tabular-nums text-foreground">
@@ -307,7 +307,7 @@ export function SimulatorPage() {
               <h2 className="mb-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 Bob's position {sim.years > 0 && `· ${sim.years}y elapsed`}
               </h2>
-              <div className="rounded-xl border border-border/60 bg-card/40 p-5">
+              <div className="rounded-xl border border-border/60 bg-card p-5">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -373,7 +373,7 @@ export function SimulatorPage() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-border/60 bg-card/40 p-5">
+            <div className="rounded-xl border border-border/60 bg-card p-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <CryptoIcon symbol="USDC" size={22} />
@@ -391,7 +391,7 @@ export function SimulatorPage() {
           </div>
         </div>
 
-        <div className="mt-8 rounded-xl border border-border/60 bg-card/40 p-5 text-xs leading-relaxed text-muted-foreground">
+        <div className="mt-8 rounded-xl border border-border/60 bg-card p-5 text-xs leading-relaxed text-muted-foreground">
           <span className="font-bold text-foreground">Try this:</span> push Bob's borrow up near his
           max, then drag the ETH price down. Watch the health factor cross the red line — then hit{" "}
           <span className="font-bold text-foreground">Liquidate Bob</span> and see he still keeps the

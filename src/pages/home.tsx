@@ -131,7 +131,7 @@ export function HomePage({ navigate }: Props) {
           {SWAP_STEPS.map((step) => (
             <div
               key={step.n}
-              className="overflow-hidden rounded-2xl border border-border/60 bg-card/40 transition-colors hover:border-foreground/20"
+              className="overflow-hidden rounded-2xl border border-border/60 bg-card transition-colors hover:border-foreground/20"
             >
               <step.Illo />
               <div className="border-t border-border/40 p-5">
@@ -169,7 +169,7 @@ export function HomePage({ navigate }: Props) {
             <button
               key={`${from}-${to}`}
               onClick={scrollToWidget}
-              className="group flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-card/40 px-4 py-3.5 transition-colors hover:border-foreground/25 hover:bg-white/[0.03]"
+              className="group flex items-center justify-center gap-2 rounded-xl border border-border/60 bg-card px-4 py-3.5 transition-colors hover:border-foreground/25 hover:bg-white/[0.03]"
             >
               <CryptoIcon symbol={from} size={20} />
               <span className="text-xs font-bold text-foreground">{from}</span>
@@ -181,7 +181,7 @@ export function HomePage({ navigate }: Props) {
         </div>
       </section>
 
-      <section className="relative z-10 border-y border-border/40 bg-background/40">
+      <section className="relative z-10 border-y border-border/40 bg-background">
         <div className="mx-auto max-w-5xl px-4 py-24">
           <div className="mx-auto mb-12 flex max-w-xl flex-col items-center text-center">
             <h2 className="text-2xl font-bold leading-tight tracking-tight text-foreground md:text-3xl">
@@ -218,7 +218,7 @@ export function HomePage({ navigate }: Props) {
             ].map((f) => (
               <div
                 key={f.title}
-                className="flex flex-col justify-between overflow-hidden rounded-2xl border border-border/60 bg-card/40 transition-colors hover:border-foreground/20"
+                className="flex flex-col justify-between overflow-hidden rounded-2xl border border-border/60 bg-card transition-colors hover:border-foreground/20"
               >
                 <f.Illo />
                 <div className="border-t border-border/40 p-5">
@@ -243,7 +243,7 @@ export function HomePage({ navigate }: Props) {
             <AccordionItem
               key={i}
               value={`teaser-${i}`}
-              className="rounded-xl border border-border/60 bg-card/40 px-4"
+              className="rounded-xl border border-border/60 bg-card px-4"
             >
               <AccordionTrigger className="py-4 text-left text-sm font-bold text-foreground hover:no-underline">
                 {item.q}

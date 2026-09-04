@@ -92,7 +92,7 @@ export function HowItWorksPage({ navigate }: Props) {
           ].map((s) => (
             <div
               key={s.label}
-              className="rounded-xl border border-border/60 bg-card/40 p-4 text-center"
+              className="rounded-xl border border-border/60 bg-card p-4 text-center"
             >
               <div className="text-xl font-bold tabular-nums text-foreground">{s.value}</div>
               <div className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -108,7 +108,7 @@ export function HowItWorksPage({ navigate }: Props) {
           </h2>
           <div className="grid gap-3 sm:grid-cols-2">
             {FEATURES.map((f) => (
-              <div key={f.title} className="rounded-xl border border-border/60 bg-card/40 p-5">
+              <div key={f.title} className="rounded-xl border border-border/60 bg-card p-5">
                 <h3 className="text-sm font-bold text-foreground">{f.title}</h3>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{f.desc}</p>
               </div>
@@ -116,7 +116,7 @@ export function HowItWorksPage({ navigate }: Props) {
           </div>
         </div>
 
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-border/60 bg-card/40 p-8 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-border/60 bg-card p-8 text-center">
           <h2 className="text-lg font-bold text-foreground">Ready to swap?</h2>
           <p className="max-w-sm text-xs text-muted-foreground">
             Connect your wallet and swap. No account required.

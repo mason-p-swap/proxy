@@ -59,7 +59,7 @@ export function OrderBook({ refreshKey, onPickPrice }: Props) {
   }, [reserves])
 
   return (
-    <div className="rounded-xl border border-border/60 bg-card/40 p-4">
+    <div className="rounded-xl border border-border/60 bg-card p-4">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-sm font-bold text-foreground">Order book</span>
         <span className="text-[10px] text-muted-foreground">pool depth · zXMR / USDC</span>

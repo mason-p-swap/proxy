@@ -72,7 +72,7 @@ export function FaqPage({ navigate }: Props) {
 
       <div className="relative z-10 mx-auto max-w-2xl px-4 py-12" style={{ animation: "fade-in-up 0.5s ease-out" }}>
         <div className="mb-10 text-center">
-          <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full border border-border/60 bg-card/40">
+          <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full border border-border/60 bg-card">
             <HelpCircle className="size-5 text-foreground" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Frequently asked questions</h1>
@@ -92,7 +92,7 @@ export function FaqPage({ navigate }: Props) {
                   <AccordionItem
                     key={i}
                     value={`${section.category}-${i}`}
-                    className="rounded-xl border border-border/60 bg-card/40 px-4"
+                    className="rounded-xl border border-border/60 bg-card px-4"
                   >
                     <AccordionTrigger className="py-4 text-left text-sm font-bold text-foreground hover:no-underline">
                       {item.q}
@@ -107,7 +107,7 @@ export function FaqPage({ navigate }: Props) {
           ))}
         </div>
 
-        <div className="mt-12 flex flex-col items-center gap-3 rounded-2xl border border-border/60 bg-card/40 p-8 text-center">
+        <div className="mt-12 flex flex-col items-center gap-3 rounded-2xl border border-border/60 bg-card p-8 text-center">
           <h2 className="text-lg font-bold text-foreground">Still have questions?</h2>
           <p className="max-w-sm text-xs text-muted-foreground">
             Try the exchange — it takes less than a minute to start.
