@@ -96,6 +96,24 @@ export const SWAP_TOKENS: SwapToken[] = [
   { symbol: "XMR", name: "Monero", icon: "XMR", decimals: 12, isBridge: true },
 ]
 
+export const ADDR_ZFI = "0x627e28cfee48075d8ea233f97aaec8bafcb23968" as Address
+
+export type TradeMarket = {
+  symbol: string
+  name: string
+  icon: string
+  decimals: number
+  address: Address
+  coingecko: string | null
+}
+
+export const TRADE_QUOTE = { symbol: "USDC", address: ADDR_V2.usdc, decimals: 6 } as const
+
+export const TRADE_MARKETS: TradeMarket[] = [
+  { symbol: "zXMR", name: "Wrapped Monero", icon: "zXMR", decimals: 18, address: ADDR_AMM.zxmr, coingecko: "monero" },
+  { symbol: "ZFI", name: "ZeroFi", icon: "zfi", decimals: 18, address: ADDR_ZFI, coingecko: null },
+]
+
 export const ROUTER_ABI = parseAbi([
   "function getAmountsOut(uint256 amountIn, address[] path) view returns (uint256[])",
   "function getReserves(address tokenA, address tokenB) view returns (uint256 reserveA, uint256 reserveB)",

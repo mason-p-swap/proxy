@@ -3,15 +3,15 @@ import { formatUnits, parseUnits } from "viem"
 import { toast } from "sonner"
 import type { Route } from "@/lib/types"
 import {
-  SWAP_TOKENS,
+  ADDR_AMM,
+  TRADE_MARKETS,
+  TRADE_QUOTE,
   ROUTER_ABI,
   ERC20_ABI,
   EXPLORER,
   publicClient,
   walletClient,
 } from "@/lib/web3"
-import { quoteBestRoute } from "@/lib/route-engine"
-import { usePrices } from "@/lib/prices"
 import {
   createLimitOrder,
   cancelOrder,
@@ -48,13 +48,13 @@ function untilStr(ts: number): string {
 
 export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => void }) {
   const { hasProvider, account, connecting, onSepolia } = useWallet()
-  const price = usePrices()
   const connected = hasProvider && Boolean(account) && onSepolia
 
-  const base = SWAP_TOKENS.find((t) => t.symbol === "zXMR")!
-  const quote = SWAP_TOKENS.find((t) => t.symbol === "USDC")!
+  const [marketSym, setMarketSym] = useState(TRADE_MARKETS[0].symbol)
+  const base = TRADE_MARKETS.find((m) => m.symbol === marketSym)!
+  const quote = TRADE_QUOTE
   const [poolPrice, setPoolPrice] = useState<number | null>(null)
-  const mkt = poolPrice ?? price("zXMR")
+  const mkt = poolPrice ?? 0
 
   const [side, setSide] = useState<"buy" | "sell">("buy")
   const [type, setType] = useState<"market" | "limit">("market")
@@ -70,39 +70,50 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
   const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
-    if (!priceEdited && mkt > 0) setLimitPrice(mkt.toFixed(2))
+    setPoolPrice(null)
+    setPriceEdited(false)
+    setAmount("")
+    setQuoteOut(null)
+  }, [marketSym])
+
+  useEffect(() => {
+    if (!priceEdited && mkt > 0) setLimitPrice(mkt.toFixed(mkt < 10 ? 4 : 2))
   }, [mkt, priceEdited])
 
   useEffect(() => {
     let alive = true
-    quoteBestRoute(base, quote, parseUnits("1", base.decimals))
-      .then((q) => {
-        if (alive && q && q.amounts.length) {
-          setPoolPrice(Number(formatUnits(q.amounts[q.amounts.length - 1], quote.decimals)))
-        }
+    publicClient
+      .readContract({
+        address: ADDR_AMM.router, abi: ROUTER_ABI, functionName: "getAmountsOut",
+        args: [parseUnits("1", base.decimals), [base.address, quote.address]],
+      })
+      .then((r) => {
+        const amounts = r as bigint[]
+        if (alive && amounts.length) setPoolPrice(Number(formatUnits(amounts[amounts.length - 1], quote.decimals)))
       })
       .catch(() => {})
     return () => { alive = false }
-  }, [base, quote, refreshKey])
+  }, [base.address, base.decimals, quote.address, quote.decimals, refreshKey])
 
   useEffect(() => {
-    setOrders(syncFills(mkt || 0))
-    const t = setInterval(() => setOrders(syncFills(mkt || 0)), 15000)
+    setOrders(syncFills(base.symbol, mkt || 0))
+    const t = setInterval(() => setOrders(syncFills(base.symbol, mkt || 0)), 15000)
     return () => clearInterval(t)
-  }, [mkt])
+  }, [base.symbol, mkt])
 
   useEffect(() => {
     if (!account) { setBalBase(null); setBalQuote(null); return }
     let alive = true
     Promise.all([
-      publicClient.readContract({ address: base.address!, abi: ERC20_ABI, functionName: "balanceOf", args: [account] }),
-      publicClient.readContract({ address: quote.address!, abi: ERC20_ABI, functionName: "balanceOf", args: [account] }),
+      publicClient.readContract({ address: base.address, abi: ERC20_ABI, functionName: "balanceOf", args: [account] }),
+      publicClient.readContract({ address: quote.address, abi: ERC20_ABI, functionName: "balanceOf", args: [account] }),
     ]).then(([b, q]) => { if (alive) { setBalBase(b as bigint); setBalQuote(q as bigint) } }).catch(() => {})
     return () => { alive = false }
   }, [account, base.address, quote.address, refreshKey])
 
   const fromTok = side === "buy" ? quote : base
   const toTok = side === "buy" ? base : quote
+  const path = side === "buy" ? [quote.address, base.address] : [base.address, quote.address]
   const amt = parseFloat(amount) || 0
 
   useEffect(() => {
@@ -110,12 +121,16 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
     let alive = true
     const t = setTimeout(async () => {
       try {
-        const q = await quoteBestRoute(fromTok, toTok, parseUnits(amount as `${number}`, fromTok.decimals))
-        if (alive) setQuoteOut(q ? q.amounts[q.amounts.length - 1] : null)
+        const r = await publicClient.readContract({
+          address: ADDR_AMM.router, abi: ROUTER_ABI, functionName: "getAmountsOut",
+          args: [parseUnits(amount as `${number}`, fromTok.decimals), path],
+        })
+        const amounts = r as bigint[]
+        if (alive) setQuoteOut(amounts.length ? amounts[amounts.length - 1] : null)
       } catch { if (alive) setQuoteOut(null) }
     }, 350)
     return () => { alive = false; clearTimeout(t) }
-  }, [amount, side, type, amt, fromTok, toTok])
+  }, [amount, side, type, amt, marketSym])
 
   const estOut = quoteOut != null ? Number(formatUnits(quoteOut, toTok.decimals)) : null
   const fromBal = side === "buy" ? balQuote : balBase
@@ -143,24 +158,27 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
     setBusy("market")
     try {
       const inWei = parseUnits(amount as `${number}`, fromTok.decimals)
-      const q = await quoteBestRoute(fromTok, toTok, inWei)
-      if (!q || !q.amounts.length) { toast.error("no route / not enough liquidity"); return }
-      const outWei = q.amounts[q.amounts.length - 1]
+      const r = await publicClient.readContract({
+        address: ADDR_AMM.router, abi: ROUTER_ABI, functionName: "getAmountsOut", args: [inWei, path],
+      })
+      const amounts = r as bigint[]
+      if (!amounts.length) { toast.error("no route / not enough liquidity"); return }
+      const outWei = amounts[amounts.length - 1]
       const minOut = (outWei * (10_000n - SLIPPAGE_BPS)) / 10_000n
       const wc = walletClient(account)
       const allowance = (await publicClient.readContract({
-        address: fromTok.address!, abi: ERC20_ABI, functionName: "allowance", args: [account, q.plan.router],
+        address: fromTok.address, abi: ERC20_ABI, functionName: "allowance", args: [account, ADDR_AMM.router],
       })) as bigint
       if (allowance < inWei) {
         await sendTx(`Approving ${fromTok.symbol}`, () =>
-          wc.writeContract({ address: fromTok.address!, abi: ERC20_ABI, functionName: "approve", args: [q.plan.router, inWei] })
+          wc.writeContract({ address: fromTok.address, abi: ERC20_ABI, functionName: "approve", args: [ADDR_AMM.router, inWei] })
         )
       }
       const deadline = BigInt(Math.floor(Date.now() / 1000) + 1200)
-      await sendTx(`${side === "buy" ? "Buy" : "Sell"} zXMR`, () =>
+      await sendTx(`${side === "buy" ? "Buy" : "Sell"} ${base.symbol}`, () =>
         wc.writeContract({
-          address: q.plan.router, abi: ROUTER_ABI, functionName: "swapExactTokensForTokens",
-          args: [inWei, minOut, q.plan.path, account, deadline],
+          address: ADDR_AMM.router, abi: ROUTER_ABI, functionName: "swapExactTokensForTokens",
+          args: [inWei, minOut, path, account, deadline],
         })
       )
       setAmount("")
@@ -177,8 +195,8 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
     const lp = parseFloat(limitPrice) || 0
     if (amt <= 0 || lp <= 0) return
     const expiresAt = expiryMs ? Date.now() + expiryMs : undefined
-    createLimitOrder({ side, base: "zXMR", quote: "USDC", amount: amt, limitPrice: lp, expiresAt })
-    setOrders(syncFills(mkt || 0))
+    createLimitOrder({ side, base: base.symbol, quote: quote.symbol, amount: amt, limitPrice: lp, expiresAt })
+    setOrders(syncFills(base.symbol, mkt || 0))
     setAmount("")
     toast.success(`Limit ${side} order placed`)
   }
@@ -190,7 +208,7 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
     try {
       const wc = walletClient(account)
       await sendTx(`Minting test ${tok.symbol}`, () =>
-        wc.writeContract({ address: tok.address!, abi: ERC20_ABI, functionName: "faucet" })
+        wc.writeContract({ address: tok.address, abi: ERC20_ABI, functionName: "faucet" })
       )
       setRefreshKey((k) => k + 1)
     } catch (e) {
@@ -208,32 +226,51 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
 
   const amountLabel =
     type === "market"
-      ? side === "buy" ? "Amount to spend (USDC)" : "Amount to sell (zXMR)"
-      : "Amount (zXMR)"
+      ? side === "buy" ? "Amount to spend (USDC)" : `Amount to sell (${base.symbol})`
+      : `Amount (${base.symbol})`
 
-  const openOrders = orders.filter((o) => o.status === "open")
-  const pastOrders = orders.filter((o) => o.status !== "open")
+  const marketOrders = orders.filter((o) => o.base === base.symbol)
+  const openOrders = marketOrders.filter((o) => o.status === "open")
+  const pastOrders = marketOrders.filter((o) => o.status !== "open")
 
   return (
     <div className="relative min-h-svh overflow-hidden pt-14">
       <div className="relative z-10 mx-auto max-w-6xl px-4 py-8" style={{ animation: "fade-in-up 0.5s ease-out" }}>
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Trade</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Buy and sell zXMR at market, or set a limit order. Market orders settle on-chain in one swap.
-          </p>
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Trade</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Buy and sell at market, or set a limit order. Market orders settle on-chain in one swap.
+            </p>
+          </div>
+          <div className="flex gap-1 rounded-lg border border-border bg-card p-1">
+            {TRADE_MARKETS.map((m) => (
+              <button
+                key={m.symbol}
+                onClick={() => setMarketSym(m.symbol)}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-bold transition-colors",
+                  marketSym === m.symbol ? "bg-white/10 text-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <CryptoIcon symbol={m.icon} size={16} />
+                {m.symbol} / USDC
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
           <div className="space-y-4">
-            <PriceChart anchor={mkt} />
+            <PriceChart anchor={mkt} coingecko={base.coingecko} symbol={base.symbol} />
             <OrderBook
+              base={base}
               refreshKey={refreshKey}
-              onPickPrice={(p) => { setLimitPrice(p.toFixed(2)); setPriceEdited(true); setType("limit") }}
+              onPickPrice={(p) => { setLimitPrice(p.toFixed(p < 10 ? 4 : 2)); setPriceEdited(true); setType("limit") }}
             />
           </div>
 
-          <div className="rounded-xl border border-border/60 bg-card p-4">
+          <div className="rounded-xl border border-border bg-card p-4">
             <div className="grid grid-cols-2 gap-1 rounded-lg bg-background p-1">
               <button
                 onClick={() => setSide("buy")}
@@ -275,7 +312,7 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
                     placeholder="0"
                     className="min-w-0 flex-1 bg-transparent text-base font-semibold tabular-nums focus-visible:outline-none"
                   />
-                  <CryptoIcon symbol={type === "market" && side === "buy" ? "USDC" : "zXMR"} size={18} />
+                  <CryptoIcon symbol={type === "market" && side === "buy" ? "USDC" : base.icon} size={18} />
                 </div>
                 {fromBal != null && (
                   <div className="flex justify-end px-1 text-[10px] text-muted-foreground">
@@ -316,9 +353,7 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
                         onClick={() => setExpiryMs(o.ms)}
                         className={cn(
                           "flex-1 rounded-md border py-1.5 text-[11px] font-bold transition-colors",
-                          expiryMs === o.ms
-                            ? "border-transparent bg-white/10 text-foreground"
-                            : "border-input text-muted-foreground hover:text-foreground"
+                          expiryMs === o.ms ? "border-transparent bg-white/10 text-foreground" : "border-input text-muted-foreground hover:text-foreground"
                         )}
                       >
                         {o.label}
@@ -337,7 +372,7 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
                 )}
                 {type === "limit" && limitCost > 0 && (
                   <span>
-                    {side === "buy" ? "Cost" : "Receive"} ≈ <span className="font-semibold text-foreground">{fmtAmount(limitCost)} USDC</span> when zXMR {side === "buy" ? "≤" : "≥"} ${fmtAmount(parseFloat(limitPrice))}
+                    {side === "buy" ? "Cost" : "Receive"} ≈ <span className="font-semibold text-foreground">{fmtAmount(limitCost)} USDC</span> when {base.symbol} {side === "buy" ? "≤" : "≥"} ${fmtAmount(parseFloat(limitPrice))}
                   </span>
                 )}
               </div>
@@ -371,7 +406,7 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
                   )}
                 >
                   {busy === "market" && <Loader2 className="size-4 animate-spin" />}
-                  {busy === "market" ? "check MetaMask…" : overBalance ? `insufficient ${fromTok.symbol}` : `${side === "buy" ? "Buy" : "Sell"} zXMR`}
+                  {busy === "market" ? "check MetaMask…" : overBalance ? `insufficient ${fromTok.symbol}` : `${side === "buy" ? "Buy" : "Sell"} ${base.symbol}`}
                 </button>
               )}
 
@@ -396,7 +431,7 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
                     {busy === "faucet-quote" ? <Loader2 className="size-3 animate-spin" /> : <Droplets className="size-3" />} test USDC
                   </button>
                   <button onClick={() => faucet("base")} disabled={busy !== null} className="flex items-center gap-1 hover:text-foreground disabled:opacity-50">
-                    {busy === "faucet-base" ? <Loader2 className="size-3 animate-spin" /> : <Droplets className="size-3" />} test zXMR
+                    {busy === "faucet-base" ? <Loader2 className="size-3 animate-spin" /> : <Droplets className="size-3" />} test {base.symbol}
                   </button>
                 </div>
               )}
@@ -425,11 +460,11 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
           </div>
         </div>
 
-        <div className="mt-4 overflow-hidden rounded-xl border border-border/60 bg-card">
+        <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
           <div className="border-b border-border/60 px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-            Orders
+            {base.symbol} orders
           </div>
-          {orders.length === 0 ? (
+          {marketOrders.length === 0 ? (
             <div className="flex h-24 items-center justify-center text-xs text-muted-foreground">
               no orders yet — your limit orders will show here.
             </div>
@@ -441,7 +476,7 @@ export function TradePage({ navigate: _navigate }: { navigate: (to: Route) => vo
                     {o.side}
                   </span>
                   <span className="tabular-nums text-foreground">
-                    {fmtAmount(o.amount)} zXMR <span className="text-muted-foreground">@ ${fmtAmount(o.limitPrice)}</span>
+                    {fmtAmount(o.amount)} {o.base} <span className="text-muted-foreground">@ ${fmtAmount(o.limitPrice)}</span>
                   </span>
                   <span className="text-[10px] text-muted-foreground">
                     <span className={cn("font-bold uppercase", o.status === "filled" ? "text-success" : o.status === "open" ? "text-warning" : "text-muted-foreground")}>

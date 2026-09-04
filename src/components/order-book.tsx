@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
-import { formatUnits } from "viem"
-import { ADDR_AMM, ROUTER_ABI, SWAP_TOKENS, publicClient } from "@/lib/web3"
+import { formatUnits, type Address } from "viem"
+import { ADDR_AMM, ROUTER_ABI, TRADE_QUOTE, publicClient } from "@/lib/web3"
 import { fmtAmount } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
@@ -9,18 +9,22 @@ const STEP = 0.0012
 
 type Level = { price: number; size: number; cum: number }
 
-type Props = { refreshKey?: number; onPickPrice?: (price: number) => void }
+type Props = {
+  base: { symbol: string; address: Address; decimals: number }
+  refreshKey?: number
+  onPickPrice?: (price: number) => void
+}
 
-export function OrderBook({ refreshKey, onPickPrice }: Props) {
-  const base = SWAP_TOKENS.find((t) => t.symbol === "zXMR")!
-  const quote = SWAP_TOKENS.find((t) => t.symbol === "USDC")!
+export function OrderBook({ base, refreshKey, onPickPrice }: Props) {
+  const quote = TRADE_QUOTE
   const [reserves, setReserves] = useState<{ rz: number; rq: number } | null>(null)
 
   useEffect(() => {
     let alive = true
+    setReserves(null)
     const load = () =>
       publicClient
-        .readContract({ address: ADDR_AMM.router, abi: ROUTER_ABI, functionName: "getReserves", args: [base.address!, quote.address!] })
+        .readContract({ address: ADDR_AMM.router, abi: ROUTER_ABI, functionName: "getReserves", args: [base.address, quote.address] })
         .then((r) => {
           if (!alive) return
           const [a, b] = r as readonly [bigint, bigint]
@@ -62,12 +66,12 @@ export function OrderBook({ refreshKey, onPickPrice }: Props) {
     <div className="rounded-xl border border-border/60 bg-card p-4">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-sm font-bold text-foreground">Order book</span>
-        <span className="text-[10px] text-muted-foreground">pool depth · zXMR / USDC</span>
+        <span className="text-[10px] text-muted-foreground">pool depth · {base.symbol} / USDC</span>
       </div>
 
       <div className="grid grid-cols-3 px-1 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground">
         <span>Price (USD)</span>
-        <span className="text-right">Size (zXMR)</span>
+        <span className="text-right">Size ({base.symbol})</span>
         <span className="text-right">Total</span>
       </div>
 

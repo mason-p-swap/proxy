@@ -69,7 +69,7 @@ export function cancelOrder(id: string): void {
   persistAll(all)
 }
 
-export function syncFills(currentPrice: number): LimitOrder[] {
+export function syncFills(base: string, currentPrice: number): LimitOrder[] {
   const all = loadAll()
   const now = Date.now()
   let changed = false
@@ -80,6 +80,7 @@ export function syncFills(currentPrice: number): LimitOrder[] {
       changed = true
       continue
     }
+    if (o.base !== base) continue
     const hit = o.side === "buy" ? currentPrice <= o.limitPrice : currentPrice >= o.limitPrice
     if (hit) {
       o.status = "filled"
@@ -91,6 +92,7 @@ export function syncFills(currentPrice: number): LimitOrder[] {
   return [...all].sort((a, b) => b.createdAt - a.createdAt)
 }
 
-export function listOrders(): LimitOrder[] {
-  return [...loadAll()].sort((a, b) => b.createdAt - a.createdAt)
+export function listOrders(base?: string): LimitOrder[] {
+  const all = base ? loadAll().filter((o) => o.base === base) : loadAll()
+  return [...all].sort((a, b) => b.createdAt - a.createdAt)
 }

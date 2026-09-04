@@ -34,6 +34,7 @@ const TICKER_FALLBACK: Record<string, string> = {
   weth: "#627eea",
   xmr: "#ff6600",
   zxmr: "#f5883e",
+  zfi: "#e07a3c",
 }
 
 type Props = {

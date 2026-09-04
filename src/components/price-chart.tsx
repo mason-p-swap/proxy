@@ -8,9 +8,9 @@ const TFS: Timeframe[] = ["1D", "1W", "1M", "3M"]
 const VW = 1000
 const VH = 260
 
-type Props = { anchor?: number }
+type Props = { anchor?: number; coingecko?: string | null; symbol?: string }
 
-export function PriceChart({ anchor }: Props) {
+export function PriceChart({ anchor, coingecko = "monero", symbol = "zXMR" }: Props) {
   const [tf, setTf] = useState<Timeframe>("1W")
   const [data, setData] = useState<Candle[] | null>(null)
   const [err, setErr] = useState(false)
@@ -21,11 +21,11 @@ export function PriceChart({ anchor }: Props) {
     let alive = true
     setData(null)
     setErr(false)
-    fetchOhlc(tf)
+    fetchOhlc(tf, coingecko ?? null)
       .then((d) => alive && setData(d))
       .catch(() => alive && setErr(true))
     return () => { alive = false }
-  }, [tf])
+  }, [tf, coingecko])
 
   const series = useMemo(() => {
     if (!data || data.length < 2) return null
@@ -63,7 +63,7 @@ export function PriceChart({ anchor }: Props) {
       <div className="mb-3 flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-foreground">zXMR / USD</span>
+            <span className="text-sm font-bold text-foreground">{symbol} / USD</span>
             <span className="rounded-sm bg-white/5 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-muted-foreground">live</span>
           </div>
           <div className="mt-1 flex items-baseline gap-2">
